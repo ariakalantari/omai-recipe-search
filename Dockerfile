@@ -16,7 +16,7 @@ WORKDIR /app
 RUN groupadd --system app && useradd --system --gid app --create-home app
 
 COPY pyproject.toml uv.lock README.md LICENSE ./
-COPY src ./src
+COPY src/recipe_search/*.py ./src/recipe_search/
 RUN python -m pip install "uv==0.11.23" && uv sync --frozen --no-dev --extra all
 ENV PATH="/app/.venv/bin:$PATH"
 
@@ -42,6 +42,9 @@ RUN if [ "$INCLUDE_FULL_DATASET" = "1" ]; then \
       fi; \
     fi && \
     chown -R app:app /app
+
+# Frontend-only edits should not invalidate the expensive dataset and index layers.
+COPY --chown=app:app src/recipe_search/static ./src/recipe_search/static
 
 USER app
 EXPOSE 8000

@@ -28,6 +28,22 @@ async def test_search_api_and_health(
         assert "Multilingual hybrid search" not in landing.text
         assert 'id="recipe-dialog"' in landing.text
 
+        script = await client.get("/app.js")
+        assert script.status_code == 200
+        assert "renderPage({ animate: true })" in script.text
+        assert "renderPage({ scroll: true })" in script.text
+
+        stylesheet = await client.get("/styles.css")
+        assert stylesheet.status_code == 200
+        assert ".animate-results .recipe-card" in stylesheet.text
+        assert "@keyframes card-arrive" in stylesheet.text
+
+        favicon = await client.get("/favicon.svg")
+        assert favicon.status_code == 200
+        assert "#d4663d" in favicon.text
+        assert "#d88a2d" in favicon.text
+        assert "#64915f" in favicon.text
+
         response = await client.post(
             "/api/search",
             json={"query": "pasta con tomate y ajo", "limit": 3, "ai": "off"},

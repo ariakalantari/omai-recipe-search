@@ -118,9 +118,10 @@ const renderPagination = () => {
   pagination.hidden = false;
 };
 
-const renderPage = ({ scroll = false } = {}) => {
+const renderPage = ({ scroll = false, animate = false } = {}) => {
   const start = (currentPage - 1) * PAGE_SIZE;
   const pageRecipes = searchResults.slice(start, start + PAGE_SIZE);
+  results.classList.toggle("animate-results", animate);
   results.innerHTML = pageRecipes.map((recipe, offset) => renderRecipe(recipe, start + offset)).join("");
   const end = Math.min(start + PAGE_SIZE, searchResults.length);
   if (!pageRecipes.length) {
@@ -234,6 +235,7 @@ form.addEventListener("submit", async (event) => {
   pagination.hidden = true;
   notice.hidden = true;
   notice.setAttribute("role", "status");
+  results.classList.remove("animate-results");
   resultsQuery.textContent = `For “${value}”`;
   resultMeta.textContent = "Searching…";
   results.innerHTML = '<div class="recipe-card skeleton"></div><div class="recipe-card skeleton"></div>';
@@ -258,7 +260,7 @@ form.addEventListener("submit", async (event) => {
     if (data.meta.strategy === "adventurous") resultsTitle.textContent = "Adventurous picks";
     else if (data.meta.strategy === "discovery") resultsTitle.textContent = "Ideas to explore";
     else resultsTitle.textContent = "Best matches";
-    renderPage();
+    renderPage({ animate: true });
     const messages = [];
     if (data.meta.strategy === "adventurous") {
       messages.push("We do not know your cooking history, so these picks favor less common ingredient combinations in this collection.");

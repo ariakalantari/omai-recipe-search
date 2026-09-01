@@ -149,6 +149,29 @@ h2[tabindex="-1"]:focus { outline: none; }
   cursor: pointer;
   transition: background-color .18s ease, border-color .18s ease, box-shadow .18s ease;
 }
+.animate-results .recipe-card:not(.skeleton) {
+  --card-delay: 0ms;
+  --card-rise: 22px;
+  --card-turn: -1.6deg;
+  opacity: 0;
+  transform-origin: center 82%;
+  animation: card-arrive .64s cubic-bezier(.2,.82,.25,1.13) var(--card-delay) both;
+}
+.animate-results .recipe-card:nth-child(2) { --card-delay: 70ms; --card-rise: 28px; --card-turn: 1.4deg; }
+.animate-results .recipe-card:nth-child(3) { --card-delay: 140ms; --card-rise: 19px; --card-turn: -.9deg; }
+.animate-results .recipe-card:nth-child(4) { --card-delay: 210ms; --card-rise: 25px; --card-turn: 1.7deg; }
+.animate-results .recipe-card:nth-child(5) { --card-delay: 280ms; --card-rise: 21px; --card-turn: -1.3deg; }
+.animate-results .recipe-card:nth-child(6) { --card-delay: 350ms; --card-rise: 29px; --card-turn: 1deg; }
+.animate-results .recipe-card:nth-child(7) { --card-delay: 420ms; --card-rise: 20px; --card-turn: -1.5deg; }
+.animate-results .recipe-card:nth-child(8) { --card-delay: 490ms; --card-rise: 26px; --card-turn: 1.2deg; }
+.animate-results .recipe-card:nth-child(9) { --card-delay: 560ms; --card-rise: 23px; --card-turn: -.8deg; }
+.animate-results .recipe-card:nth-child(10) { --card-delay: 630ms; --card-rise: 28px; --card-turn: 1.5deg; }
+@keyframes card-arrive {
+  0% { opacity: 0; transform: translateY(var(--card-rise)) rotate(var(--card-turn)) scale(.94, .9); }
+  52% { opacity: 1; transform: translateY(-5px) rotate(.45deg) scale(1.018, .985); }
+  74% { transform: translateY(2px) rotate(-.18deg) scale(.993, 1.008); }
+  100% { opacity: 1; transform: translateY(0) rotate(0) scale(1); }
+}
 .recipe-card:focus-visible { outline: 2px solid var(--ink); outline-offset: 3px; }
 .card-top { display: flex; gap: 13px; align-items: flex-start; }
 .rank { flex: 0 0 auto; display: grid; place-items: center; width: 31px; height: 31px; color: #6f6e68; background: var(--soft); border-radius: 9px; font-size: 12px; font-weight: 700; }
@@ -258,4 +281,5 @@ dialog::backdrop { background: rgba(22,22,20,.42); backdrop-filter: blur(3px); }
   h1 { opacity: 1; transform: none; animation: none; }
   .title-letter { opacity: 1; transform: none; animation: none; }
   .food-icon { opacity: 1; transform: none; animation: none; }
+  .animate-results .recipe-card:not(.skeleton) { opacity: 1; transform: none; animation: none; }
 }

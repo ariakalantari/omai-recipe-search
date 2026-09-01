@@ -12,9 +12,17 @@ optionally turn fuzzy language into structured constraints, but it never chooses
 application works without it.
 
 [![CI](https://github.com/ariakalantari/omai-recipe-search/actions/workflows/ci.yml/badge.svg)](https://github.com/ariakalantari/omai-recipe-search/actions/workflows/ci.yml)
+[![Open in GitHub Codespaces](https://github.com/codespaces/badge.svg)](https://codespaces.new/ariakalantari/omai-recipe-search?quickstart=1)
 [![Deploy to Render](https://render.com/images/deploy-to-render-button.svg)](https://render.com/deploy?repo=https://github.com/ariakalantari/omai-recipe-search)
 
 ## Quick start
+
+### GitHub Codespaces (no local setup)
+
+Click **Open in GitHub Codespaces** above. The repository uses the published Docker image, starts
+the API on port 8000, and opens the forwarded web app automatically. This is the fastest
+GitHub-native review path and requires no local clone or image build. A Codespace is an ephemeral
+review environment, not the persistent public deployment.
 
 ### Docker (recommended)
 
@@ -260,6 +268,10 @@ push and pull request; a separate workflow publishes the Docker image to GHCR.
 The service is stateless after startup. Multiple replicas can share an immutable prebuilt image. At
 larger scale, store versioned index artifacts in blob storage, load them read-only, and replace the
 NumPy scan with FAISS or a managed vector/search service only after latency measurements justify it.
+
+GitHub Pages is intentionally not used because it only serves static files and cannot run this
+Python API. GitHub Codespaces provides the no-setup GitHub path, while Render provides the stable
+public application URL after deployment.
 
 The 10k Docker default is an operational demo profile, not a search-engine limitation. Local Python
 uses all records when `MAX_RECIPES` is unset. To produce a larger Docker artifact, set the build arg

@@ -1,5 +1,6 @@
 .git
 .github
+.devcontainer
 .env
 .env.*
 .venv
