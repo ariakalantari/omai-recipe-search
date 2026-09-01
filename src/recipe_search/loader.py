@@ -82,6 +82,25 @@ def _ingredients(value: Any) -> tuple[str, ...]:
     return tuple(cleaned)
 
 
+def _instructions(value: Any) -> str | None:
+    """Normalize common string and schema.org instruction shapes."""
+    if isinstance(value, str):
+        parts = value.splitlines()
+    elif isinstance(value, list):
+        parts = []
+        for item in value:
+            if isinstance(item, Mapping):
+                text = _as_text(item.get("text") or item.get("name"))
+            else:
+                text = _as_text(item)
+            if text:
+                parts.append(text)
+    else:
+        return None
+    cleaned = [part.replace("ADVERTISEMENT", "").strip() for part in parts]
+    return "\n".join(part for part in cleaned if part) or None
+
+
 def _safe_url(value: Any) -> str | None:
     text = _as_text(value)
     if not text:
@@ -126,6 +145,9 @@ def _to_recipe(record: Any, key: str, path: Path) -> Recipe | None:
         cook_time=_as_text(record.get("cookTime") or record.get("cook_time")),
         recipe_yield=_as_text(record.get("recipeYield") or record.get("yield")),
         description=_as_text(record.get("description")),
+        instructions=_instructions(
+            record.get("instructions") or record.get("recipeInstructions") or record.get("method")
+        ),
     )
 
 

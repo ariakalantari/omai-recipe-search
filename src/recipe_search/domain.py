@@ -27,6 +27,7 @@ class Recipe:
     cook_time: str | None = None
     recipe_yield: str | None = None
     description: str | None = None
+    instructions: str | None = None
 
     @property
     def search_text(self) -> str:

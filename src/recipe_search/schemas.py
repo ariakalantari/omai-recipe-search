@@ -51,6 +51,8 @@ class RecipeResponse(BaseModel):
     prep_time: str | None
     cook_time: str | None
     recipe_yield: str | None
+    description: str | None
+    instructions: str | None
     score: float
     match_reason: MatchReasonResponse
 
@@ -77,6 +79,8 @@ class RecipeResponse(BaseModel):
             prep_time=recipe.prep_time,
             cook_time=recipe.cook_time,
             recipe_yield=recipe.recipe_yield,
+            description=recipe.description,
+            instructions=recipe.instructions,
             score=round(scores.final, 4),
             match_reason=MatchReasonResponse(
                 summary=summary,

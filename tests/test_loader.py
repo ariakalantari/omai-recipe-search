@@ -10,7 +10,14 @@ from recipe_search.loader import DatasetError, load_recipes
 
 def test_loader_accepts_name_and_title_and_skips_bad_records(tmp_path: Path) -> None:
     data = {
-        "one": {"title": "Soup", "ingredients": ["1 onion ADVERTISEMENT", "ADVERTISEMENT"]},
+        "one": {
+            "title": "Soup",
+            "ingredients": ["1 onion ADVERTISEMENT", "ADVERTISEMENT"],
+            "recipeInstructions": [
+                {"text": "Chop the onion."},
+                {"text": "Simmer until tender."},
+            ],
+        },
         "two": {
             "name": "Pasta",
             "ingredients": "tomato\ngarlic",
@@ -23,6 +30,7 @@ def test_loader_accepts_name_and_title_and_skips_bad_records(tmp_path: Path) -> 
     recipes, report, fingerprint = load_recipes(path)
     assert [recipe.name for recipe in recipes] == ["Soup", "Pasta"]
     assert recipes[0].ingredients == ("1 onion",)
+    assert recipes[0].instructions == "Chop the onion.\nSimmer until tender."
     assert report.records_skipped == 1
     assert len(fingerprint) == 16
 

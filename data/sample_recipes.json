@@ -6,7 +6,8 @@
     "prepTime": "PT15M",
     "cookTime": "PT25M",
     "recipeYield": "4 servings",
-    "description": "A quick, hot and creamy fish curry."
+    "description": "A quick, hot and creamy fish curry.",
+    "instructions": "Soften the onion and garlic in a large pan. Stir in the chilies and coconut milk, then simmer for 10 minutes. Add the cod and cook gently until opaque. Finish with lime juice and cilantro."
   },
   {
     "name": "Spanish Garlic Tomato Pasta",
@@ -14,7 +15,8 @@
     "source": "development fixture",
     "prepTime": "PT10M",
     "cookTime": "PT20M",
-    "recipeYield": "4 servings"
+    "recipeYield": "4 servings",
+    "instructions": "Cook the spaghetti until al dente. Gently fry the garlic in olive oil, add the tomatoes and pepper flakes, then simmer. Toss with the pasta and finish with basil."
   },
   {
     "name": "Potato, Egg and Onion Tortilla",

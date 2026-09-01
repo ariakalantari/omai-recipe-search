@@ -19,6 +19,12 @@ async def test_search_api_and_health(
         assert health.status_code == 200
         assert health.json()["recipes"] == 12
 
+        landing = await client.get("/")
+        assert landing.status_code == 200
+        assert "API docs" in landing.text
+        assert "Multilingual hybrid search" not in landing.text
+        assert 'id="recipe-dialog"' in landing.text
+
         response = await client.post(
             "/api/search",
             json={"query": "pasta con tomate y ajo", "limit": 3, "ai": "off"},
@@ -26,6 +32,8 @@ async def test_search_api_and_health(
         assert response.status_code == 200
         body = response.json()
         assert body["results"][0]["name"] == "Spanish Garlic Tomato Pasta"
+        assert "description" in body["results"][0]
+        assert body["results"][0]["instructions"].startswith("Cook the spaghetti")
         assert body["results"][0]["match_reason"]["scores"].keys() == {
             "final",
             "semantic",
