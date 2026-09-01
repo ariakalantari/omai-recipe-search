@@ -4,9 +4,10 @@ services:
       context: .
       args:
         MAX_RECIPES: "10000"
+        EMBEDDING_PARALLEL_WORKERS: "1"
     image: omai-recipe-search:local
     ports:
-      - "8000:8000"
+      - "127.0.0.1:8000:8000"
     environment:
       AZURE_OPENAI_BASE_URL: ${AZURE_OPENAI_BASE_URL:-}
       AZURE_OPENAI_API_KEY: ${AZURE_OPENAI_API_KEY:-}

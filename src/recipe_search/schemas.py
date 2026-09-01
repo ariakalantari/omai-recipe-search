@@ -2,9 +2,17 @@ from __future__ import annotations
 
 from typing import Annotated, Literal
 
-from pydantic import BaseModel, ConfigDict, Field, StringConstraints, model_validator
+from pydantic import (
+    BaseModel,
+    ConfigDict,
+    Field,
+    StringConstraints,
+    field_validator,
+    model_validator,
+)
 
-from recipe_search.domain import InterpretedQuery, RankedRecipe, SearchMode
+from recipe_search.domain import InterpretedQuery, RankedRecipe, SearchMode, SearchStrategy
+from recipe_search.summaries import recipe_summary
 
 ShortText = Annotated[str, StringConstraints(strip_whitespace=True, min_length=1, max_length=100)]
 
@@ -21,6 +29,22 @@ class SearchRequest(BaseModel):
     mode: SearchMode = SearchMode.HYBRID
     ai: Literal["auto", "off"] = "auto"
 
+    @field_validator("query")
+    @classmethod
+    def query_has_searchable_text(cls, value: str | None) -> str | None:
+        if value is not None and not any(character.isalnum() for character in value):
+            raise ValueError("Use at least one letter or number in the query.")
+        return value
+
+    @field_validator("ingredients")
+    @classmethod
+    def ingredients_have_searchable_text(cls, values: list[str] | None) -> list[str] | None:
+        if values is not None and any(
+            not any(character.isalnum() for character in value) for value in values
+        ):
+            raise ValueError("Each ingredient must contain at least one letter or number.")
+        return values
+
     @model_validator(mode="after")
     def exactly_one_input(self) -> SearchRequest:
         if (self.query is None) == (self.ingredients is None):
@@ -33,6 +57,7 @@ class ScoreResponse(BaseModel):
     semantic: float | None
     lexical: float
     ingredient: float
+    distinctiveness: float
 
 
 class MatchReasonResponse(BaseModel):
@@ -52,16 +77,25 @@ class RecipeResponse(BaseModel):
     cook_time: str | None
     recipe_yield: str | None
     description: str | None
+    summary: str
     instructions: str | None
     score: float
     match_reason: MatchReasonResponse
 
     @classmethod
-    def from_ranked(cls, ranked: RankedRecipe) -> RecipeResponse:
+    def from_ranked(
+        cls,
+        ranked: RankedRecipe,
+        strategy: SearchStrategy = SearchStrategy.SEARCH,
+    ) -> RecipeResponse:
         recipe = ranked.recipe
         scores = ranked.scores
         matched = list(scores.matched_ingredients)
-        if matched:
+        if strategy is SearchStrategy.ADVENTUROUS:
+            summary = "Adventurous pick with a less common ingredient combination"
+        elif strategy is SearchStrategy.DISCOVERY:
+            summary = "Varied discovery pick from the recipe collection"
+        elif matched:
             summary = f"Matches {', '.join(matched[:4])}"
         elif scores.semantic is not None and scores.semantic >= scores.lexical:
             summary = "Strong meaning-based match"
@@ -80,6 +114,7 @@ class RecipeResponse(BaseModel):
             cook_time=recipe.cook_time,
             recipe_yield=recipe.recipe_yield,
             description=recipe.description,
+            summary=recipe_summary(recipe),
             instructions=recipe.instructions,
             score=round(scores.final, 4),
             match_reason=MatchReasonResponse(
@@ -90,6 +125,7 @@ class RecipeResponse(BaseModel):
                     semantic=None if scores.semantic is None else round(scores.semantic, 4),
                     lexical=round(scores.lexical, 4),
                     ingredient=round(scores.ingredient, 4),
+                    distinctiveness=round(scores.distinctiveness, 4),
                 ),
             ),
         )
@@ -97,9 +133,11 @@ class RecipeResponse(BaseModel):
 
 class QueryUnderstandingResponse(BaseModel):
     kind: str
+    intent: str
     ingredients: list[str]
     excluded_ingredients: list[str]
     preferences: list[str]
+    excluded_preferences: list[str]
     max_minutes: int | None
     source: str
     degraded: bool
@@ -109,9 +147,11 @@ class QueryUnderstandingResponse(BaseModel):
     def from_domain(cls, query: InterpretedQuery) -> QueryUnderstandingResponse:
         return cls(
             kind=query.kind,
+            intent=query.intent,
             ingredients=list(query.ingredients),
             excluded_ingredients=list(query.excluded_ingredients),
             preferences=list(query.preferences),
+            excluded_preferences=list(query.excluded_preferences),
             max_minutes=query.max_minutes,
             source=query.source,
             degraded=query.degraded,
@@ -121,11 +161,14 @@ class QueryUnderstandingResponse(BaseModel):
 
 class SearchMetaResponse(BaseModel):
     mode: str
+    strategy: str
     total_recipes: int
     returned: int
     confidence: Literal["high", "medium", "low"]
     semantic_available: bool
+    semantic_degraded: bool
     ai_available: bool
+    retrieval_warning: str | None
     query_understanding: QueryUnderstandingResponse
 
 

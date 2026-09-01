@@ -5,6 +5,8 @@ import unicodedata
 from collections.abc import Iterable
 from itertools import pairwise
 
+from recipe_search.domain import QueryIntent
+
 _NUMBER = re.compile(r"\b\d+(?:[./]\d+)?\b")
 _PUNCTUATION = re.compile(r"[^a-z0-9\s-]")
 _WHITESPACE = re.compile(r"\s+")
@@ -78,18 +80,32 @@ _QUERY_STOPWORDS = {
     "a",
     "an",
     "and",
+    "adventurous",
+    "algo",
     "any",
     "anything",
     "cook",
     "dish",
     "food",
+    "before",
+    "different",
+    "do",
+    "eaten",
+    "ever",
+    "had",
     "have",
+    "haven",
     "i",
+    "know",
     "in",
+    "new",
+    "no",
+    "not",
     "make",
     "meal",
     "med",
     "me",
+    "mig",
     "my",
     "nagot",
     "något",
@@ -97,12 +113,32 @@ _QUERY_STOPWORDS = {
     "please",
     "recipe",
     "something",
+    "surprise",
     "the",
+    "tried",
+    "try",
+    "unusual",
     "want",
+    "whatever",
     "with",
+    "without",
     "och",
+    "annorlunda",
+    "forut",
+    "har",
+    "inte",
+    "jag",
+    "nytt",
+    "overraska",
+    "utan",
     "con",
     "de",
+    "diferente",
+    "haya",
+    "nuevo",
+    "probado",
+    "sin",
+    "sorprendeme",
     "y",
     "que",
     "quiero",
@@ -137,6 +173,10 @@ _TOKEN_ALIASES = {
     "lax": "salmon",
     "lok": "onion",
     "lök": "onion",
+    "mjolk": "milk",
+    "mjölk": "milk",
+    "notter": "nut",
+    "nötter": "nut",
     "potatis": "potato",
     "torsk": "cod",
     "tomat": "tomato",
@@ -147,6 +187,7 @@ _TOKEN_ALIASES = {
     "cebolla": "onion",
     "huevo": "egg",
     "huevos": "egg",
+    "nueces": "nut",
     "patata": "potato",
     "patatas": "potato",
     "pollo": "chicken",
@@ -160,6 +201,90 @@ _TOKEN_ALIASES = {
     "tomatoes": "tomato",
     "chillies": "chili",
     "chilies": "chili",
+}
+
+_ADVENTUROUS_PHRASES = (
+    "surprise me",
+    "something new",
+    "something different",
+    "something unusual",
+    "something adventurous",
+    "never tried",
+    "have not tried",
+    "haven t tried",
+    "have not had",
+    "haven t had",
+    "not had before",
+    "nagot nytt",
+    "nagot annorlunda",
+    "overraska mig",
+    "inte har atit forut",
+    "algo nuevo",
+    "algo diferente",
+    "sorprendeme",
+    "no haya probado",
+)
+
+_BROWSE_PHRASES = (
+    "anything",
+    "anything is fine",
+    "whatever",
+    "food",
+    "i do not know",
+    "i don t know",
+    "i dont know",
+    "no preference",
+    "vad som helst",
+    "jag vet inte",
+    "cualquier cosa",
+    "no se",
+)
+
+_NEGATION_PATTERN = re.compile(
+    r"\b(?:without|excluding|exclude|except for|avoid|utan|sin)\b\s+"
+    r"(?P<items>.*?)(?=\b(?:with|med|con|but|men|pero)\b|[.;]|$)"
+)
+_SHORT_NEGATION_PATTERN = re.compile(
+    r"\b(?:no|not)\b\s+(?P<items>[a-z0-9-]+(?:\s+(?:and|or|och|y)\s+[a-z0-9-]+)?)"
+)
+
+_DISTINCTIVE_NOISE = {
+    "about",
+    "amount",
+    "brand",
+    "can",
+    "each",
+    "free",
+    "from",
+    "fully",
+    "half",
+    "inch",
+    "less",
+    "like",
+    "note",
+    "package",
+    "regular",
+    "see",
+    "sheet",
+    "some",
+    "such",
+    "use",
+}
+
+_PANTRY_STAPLES = {
+    "baking powder",
+    "baking soda",
+    "black pepper",
+    "butter",
+    "egg",
+    "flour",
+    "oil",
+    "olive oil",
+    "pepper",
+    "salt",
+    "sugar",
+    "water",
+    "white sugar",
 }
 
 
@@ -213,16 +338,107 @@ def query_ingredients(values: Iterable[str]) -> tuple[str, ...]:
     return tuple(sorted(terms, key=lambda item: (-item.count(" "), item)))
 
 
+def query_intent(value: str) -> QueryIntent:
+    normalized = normalize_text(value)
+    if any(_contains_phrase(normalized, phrase) for phrase in _ADVENTUROUS_PHRASES):
+        return QueryIntent.ADVENTUROUS
+    if normalized in _BROWSE_PHRASES or any(
+        _contains_phrase(normalized, phrase) for phrase in _BROWSE_PHRASES if " " in phrase
+    ):
+        return QueryIntent.BROWSE
+    return QueryIntent.SEARCH
+
+
+def split_excluded_ingredients(value: str) -> tuple[str, tuple[str, ...]]:
+    """Split common English, Swedish, and Spanish exclusion phrases from a query."""
+    normalized = normalize_text(value)
+    excluded_phrases: list[str] = []
+
+    def remove_match(match: re.Match[str]) -> str:
+        excluded_phrases.append(match.group("items"))
+        return " "
+
+    positive = _NEGATION_PATTERN.sub(remove_match, normalized)
+
+    def remove_short_match(match: re.Match[str]) -> str:
+        items = match.group("items")
+        # These are preferences rather than dependable ingredient exclusions.
+        if items.split()[0] in {"quick", "fast", "spicy", "starkt", "picante"}:
+            return " "
+        excluded_phrases.append(items)
+        return " "
+
+    positive = _SHORT_NEGATION_PATTERN.sub(remove_short_match, positive)
+    return positive, query_ingredients(excluded_phrases)
+
+
+def distinctive_ingredient_terms(value: str) -> frozenset[str]:
+    """Return corpus-frequency terms suitable for a bounded discovery signal."""
+    return frozenset(
+        term
+        for term in ingredient_terms(value)
+        if " " not in term
+        and len(term) > 2
+        and term not in _DISTINCTIVE_NOISE
+        and term not in _PANTRY_STAPLES
+    )
+
+
+def _contains_phrase(normalized: str, phrase: str) -> bool:
+    return re.search(rf"(?<!\w){re.escape(normalize_text(phrase))}(?!\w)", normalized) is not None
+
+
 def preference_terms(value: str) -> tuple[str, ...]:
     normalized = normalize_text(value)
     found: list[str] = []
     mappings = {
-        "spicy": ("spicy", "starkt", "picante", "hot"),
+        "spicy": ("spicy", "starkt", "picante"),
         "quick": ("quick", "fast", "snabbt", "rapido", "rápido"),
         "vegetarian": ("vegetarian", "vegetarisk", "vegetariano", "vegetariana"),
         "comfort food": ("comfort food", "comfort", "husmanskost"),
     }
     for canonical, aliases in mappings.items():
-        if any(normalize_text(alias) in normalized for alias in aliases):
+        present = any(_contains_phrase(normalized, alias) for alias in aliases)
+        negated = any(
+            _contains_phrase(normalized, f"{negation} {alias}")
+            for alias in aliases
+            for negation in (
+                "not",
+                "no",
+                "inte",
+                "without",
+                "avoid",
+                "excluding",
+                "utan",
+                "sin",
+            )
+        )
+        if present and not negated:
             found.append(canonical)
     return tuple(found)
+
+
+def excluded_preference_terms(value: str) -> tuple[str, ...]:
+    normalized = normalize_text(value)
+    mappings = {
+        "spicy": ("spicy", "starkt", "picante"),
+        "quick": ("quick", "fast", "snabbt", "rapido", "rápido"),
+    }
+    return tuple(
+        canonical
+        for canonical, aliases in mappings.items()
+        if any(
+            _contains_phrase(normalized, f"{negation} {alias}")
+            for alias in aliases
+            for negation in (
+                "not",
+                "no",
+                "inte",
+                "without",
+                "avoid",
+                "excluding",
+                "utan",
+                "sin",
+            )
+        )
+    )

@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+from collections import deque
 from collections.abc import Iterator, Mapping
 from pathlib import Path
 from typing import Any
@@ -116,6 +117,8 @@ def _source(record: Mapping[str, Any], path: Path, url: str | None) -> str | Non
     if url:
         return urlparse(url).netloc.removeprefix("www.")
     stem = path.stem
+    if stem.startswith("recipes_raw_nosource"):
+        return None
     return stem if stem != "sample_recipes" else "sample"
 
 
@@ -159,21 +162,25 @@ def load_recipes(
         raise DatasetError(f"No JSON files found in: {path}")
     report = LoadReport(files=len(files))
     recipes: list[Recipe] = []
-    for file_path in files:
+    active: deque[tuple[Path, Iterator[tuple[str, Any]]]] = deque(
+        (file_path, iter(_iter_records(file_path))) for file_path in files
+    )
+    while active and (max_recipes is None or len(recipes) < max_recipes):
+        file_path, records = active.popleft()
         try:
-            for key, record in _iter_records(file_path):
-                report.records_seen += 1
-                recipe = _to_recipe(record, key, file_path)
-                if recipe is None:
-                    report.records_skipped += 1
-                    continue
-                recipes.append(recipe)
-                if max_recipes is not None and len(recipes) >= max_recipes:
-                    break
+            key, record = next(records)
+        except StopIteration:
+            continue
         except (OSError, UnicodeError, json.JSONDecodeError, ijson.JSONError, DatasetError) as exc:
             report.warnings.append(f"Skipped {file_path.name}: {exc}")
-        if max_recipes is not None and len(recipes) >= max_recipes:
-            break
+            continue
+        active.append((file_path, records))
+        report.records_seen += 1
+        recipe = _to_recipe(record, key, file_path)
+        if recipe is None:
+            report.records_skipped += 1
+            continue
+        recipes.append(recipe)
     if not recipes:
         raise DatasetError("The dataset contained no usable recipes.")
     report.recipes_loaded = len(recipes)

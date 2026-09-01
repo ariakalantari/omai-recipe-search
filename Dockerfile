@@ -15,9 +15,10 @@ WORKDIR /app
 
 RUN groupadd --system app && useradd --system --gid app --create-home app
 
-COPY pyproject.toml README.md LICENSE ./
+COPY pyproject.toml uv.lock README.md LICENSE ./
 COPY src ./src
-RUN python -m pip install --upgrade pip && python -m pip install ".[all]"
+RUN python -m pip install "uv==0.11.23" && uv sync --frozen --no-dev --extra all
+ENV PATH="/app/.venv/bin:$PATH"
 
 COPY scripts ./scripts
 COPY evaluation ./evaluation
@@ -26,7 +27,7 @@ COPY data/sample_recipes.json data/README.md ./data/
 ARG INCLUDE_FULL_DATASET=1
 ARG PREBUILD_INDEX=1
 ARG MAX_RECIPES=10000
-ARG EMBEDDING_PARALLEL_WORKERS=2
+ARG EMBEDDING_PARALLEL_WORKERS=1
 ENV MAX_RECIPES=$MAX_RECIPES
 RUN if [ "$INCLUDE_FULL_DATASET" = "1" ]; then \
       python scripts/download_dataset.py --output data/recipes; \

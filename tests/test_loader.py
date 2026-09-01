@@ -38,3 +38,15 @@ def test_loader_accepts_name_and_title_and_skips_bad_records(tmp_path: Path) -> 
 def test_loader_rejects_missing_path(tmp_path: Path) -> None:
     with pytest.raises(DatasetError, match="does not exist"):
         load_recipes(tmp_path / "missing.json")
+
+
+def test_capped_directory_load_is_balanced_across_files(tmp_path: Path) -> None:
+    for prefix in ("alpha", "beta"):
+        records = [
+            {"name": f"{prefix}-{index}", "ingredients": [f"ingredient-{index}"]}
+            for index in range(4)
+        ]
+        (tmp_path / f"{prefix}.json").write_text(json.dumps(records), encoding="utf-8")
+
+    recipes, _, _ = load_recipes(tmp_path, max_recipes=4)
+    assert [recipe.name for recipe in recipes] == ["alpha-0", "beta-0", "alpha-1", "beta-1"]

@@ -1,4 +1,13 @@
-from recipe_search.normalization import ingredient_terms, normalize_text, query_ingredients
+from recipe_search.domain import QueryIntent
+from recipe_search.normalization import (
+    excluded_preference_terms,
+    ingredient_terms,
+    normalize_text,
+    preference_terms,
+    query_ingredients,
+    query_intent,
+    split_excluded_ingredients,
+)
 
 
 def test_normalize_text_removes_accents_and_punctuation() -> None:
@@ -15,3 +24,26 @@ def test_ingredient_terms_remove_quantities_units_and_preparation() -> None:
 def test_multilingual_food_aliases_are_canonicalized() -> None:
     terms = query_ingredients(["torsk", "kokosmjölk", "lök", "ajo", "tomates"])
     assert {"cod", "coconut milk", "onion", "garlic", "tomato"}.issubset(terms)
+
+
+def test_discovery_intent_is_multilingual_and_bounded() -> None:
+    assert query_intent("something I haven't had before") is QueryIntent.ADVENTUROUS
+    assert query_intent("något annorlunda") is QueryIntent.ADVENTUROUS
+    assert query_intent("sorpréndeme con algo nuevo") is QueryIntent.ADVENTUROUS
+    assert query_intent("food") is QueryIntent.BROWSE
+    assert query_intent("fasting food") is QueryIntent.SEARCH
+
+
+def test_negation_is_removed_from_positive_ingredients() -> None:
+    positive, excluded = split_excluded_ingredients("pasta con tomate sin ajo")
+    assert {"pasta", "tomato"}.issubset(query_ingredients([positive]))
+    assert "garlic" in excluded
+
+
+def test_preferences_use_word_boundaries_and_respect_negation() -> None:
+    assert preference_terms("hotdog after fasting") == ()
+    assert preference_terms("not spicy chicken") == ()
+    assert preference_terms("dinner without spicy food") == ()
+    assert excluded_preference_terms("not spicy chicken") == ("spicy",)
+    assert excluded_preference_terms("middag utan starkt") == ("spicy",)
+    assert excluded_preference_terms("cena sin picante") == ("spicy",)

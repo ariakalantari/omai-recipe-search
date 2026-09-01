@@ -68,5 +68,27 @@
     "expected_any": [],
     "minimum_matches": 0,
     "note": "Impossible query; confidence should be low"
+  },
+  {
+    "id": "en_discovery",
+    "query": "something I haven't had before",
+    "expected_any": [],
+    "minimum_matches": 0,
+    "note": "English adventurous discovery intent"
+  },
+  {
+    "id": "sv_discovery",
+    "query": "överraska mig med något nytt",
+    "expected_any": [],
+    "minimum_matches": 0,
+    "note": "Swedish adventurous discovery intent"
+  },
+  {
+    "id": "es_exclusion",
+    "query": "pasta con tomate sin ajo",
+    "expected_any": ["pasta", "tomato"],
+    "excluded_any": ["garlic"],
+    "minimum_matches": 2,
+    "note": "Spanish pasta query without garlic"
   }
 ]

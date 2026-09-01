@@ -2,17 +2,72 @@ from __future__ import annotations
 
 import asyncio
 import logging
-from collections.abc import AsyncIterator
+from collections.abc import AsyncIterator, Awaitable, Callable
 from contextlib import asynccontextmanager
 from pathlib import Path
+from typing import Final
 
 from fastapi import FastAPI, Request
-from fastapi.responses import RedirectResponse
+from fastapi.exceptions import RequestValidationError
+from fastapi.responses import JSONResponse, RedirectResponse, Response
 from fastapi.staticfiles import StaticFiles
+from starlette.types import ASGIApp, Message, Receive, Scope, Send
 
 from recipe_search.config import Settings, get_settings
 from recipe_search.schemas import HealthResponse, SearchRequest, SearchResponse
-from recipe_search.service import SearchService, build_search_service
+from recipe_search.service import SearchCapacityError, SearchService, build_search_service
+
+_JSON_CONTENT_TYPE: Final = "application/json"
+
+
+class RequestTooLargeError(Exception):
+    pass
+
+
+class RequestBodyLimitMiddleware:
+    """Reject oversized API bodies before JSON parsing or validation reflection."""
+
+    def __init__(self, app: ASGIApp, max_bytes: int) -> None:
+        self.app = app
+        self.max_bytes = max_bytes
+
+    async def __call__(self, scope: Scope, receive: Receive, send: Send) -> None:
+        if scope["type"] != "http" or not str(scope.get("path", "")).startswith("/api/"):
+            await self.app(scope, receive, send)
+            return
+
+        headers = dict(scope.get("headers", []))
+        try:
+            content_length = int(headers.get(b"content-length", b"0"))
+        except ValueError:
+            content_length = 0
+        if content_length > self.max_bytes:
+            await self._reject(scope, receive, send)
+            return
+
+        received = 0
+
+        async def limited_receive() -> Message:
+            nonlocal received
+            message = await receive()
+            if message["type"] == "http.request":
+                received += len(message.get("body", b""))
+                if received > self.max_bytes:
+                    raise RequestTooLargeError
+            return message
+
+        try:
+            await self.app(scope, limited_receive, send)
+        except RequestTooLargeError:
+            await self._reject(scope, receive, send)
+
+    @staticmethod
+    async def _reject(scope: Scope, receive: Receive, send: Send) -> None:
+        response = JSONResponse(
+            status_code=413,
+            content={"detail": "Request body is too large."},
+        )
+        await response(scope, receive, send)
 
 
 def create_app(
@@ -45,6 +100,52 @@ def create_app(
         ),
         lifespan=lifespan,
     )
+    app.add_middleware(
+        RequestBodyLimitMiddleware,
+        max_bytes=runtime_settings.max_request_body_bytes,
+    )
+
+    @app.exception_handler(RequestValidationError)
+    async def validation_error_handler(
+        _request: Request, exc: RequestValidationError
+    ) -> JSONResponse:
+        errors = [
+            {
+                "loc": list(error.get("loc", ())),
+                "msg": error.get("msg", "Invalid request."),
+                "type": error.get("type", "value_error"),
+            }
+            for error in exc.errors()
+        ]
+        return JSONResponse(status_code=422, content={"detail": errors})
+
+    @app.exception_handler(SearchCapacityError)
+    async def capacity_error_handler(_request: Request, _exc: SearchCapacityError) -> JSONResponse:
+        return JSONResponse(
+            status_code=503,
+            content={"detail": "Search is busy. Please try again shortly."},
+            headers={"Retry-After": "2"},
+        )
+
+    @app.middleware("http")
+    async def security_headers(
+        request: Request, call_next: Callable[[Request], Awaitable[Response]]
+    ) -> Response:
+        response = await call_next(request)
+        response.headers["X-Content-Type-Options"] = "nosniff"
+        response.headers["X-Frame-Options"] = "DENY"
+        response.headers["Referrer-Policy"] = "no-referrer"
+        response.headers["Permissions-Policy"] = "camera=(), microphone=(), geolocation=()"
+        path = request.url.path
+        if path == "/" or path.endswith((".js", ".css", ".svg")):
+            response.headers["Content-Security-Policy"] = (
+                "default-src 'self'; base-uri 'none'; object-src 'none'; "
+                "frame-ancestors 'none'; form-action 'self'; img-src 'self' data:; "
+                "style-src 'self'; script-src 'self'; connect-src 'self'"
+            )
+        if path.startswith("/api/"):
+            response.headers["Cache-Control"] = "no-store"
+        return response
 
     @app.get("/healthz", response_model=HealthResponse, tags=["operations"])
     async def health(request: Request) -> HealthResponse:

@@ -9,20 +9,33 @@
     <link rel="stylesheet" href="/styles.css" />
   </head>
   <body>
-    <a class="docs-link" href="/docs">
-      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 4h14v16H5zM8 8h8M8 12h8M8 16h5" /></svg>
-      API docs
-    </a>
+    <div class="top-actions">
+      <button id="how-button" class="top-link" type="button">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M9.8 9a2.4 2.4 0 0 1 4.5 1.2c0 1.8-2.3 2-2.3 3.7M12 17.5h.01" /></svg>
+        How it works
+      </button>
+      <a class="top-link" href="/docs">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 4h14v16H5zM8 8h8M8 12h8M8 16h5" /></svg>
+        API docs
+      </a>
+    </div>
 
     <main>
       <section class="hero" aria-labelledby="hero-title">
-        <h1 id="hero-title">What should we cook?</h1>
+        <div class="title-lockup">
+          <h1 id="hero-title">What should we cook?</h1>
+          <span class="food-icons" aria-hidden="true">
+            <svg class="food-icon food-icon-bowl" viewBox="0 0 32 32"><path d="M5 15h22c-.7 7-4.4 11-11 11S5.7 22 5 15Z" /><path d="M9 11c0-2 1.4-3 1.4-5M16 11c0-2 1.4-3 1.4-5M23 11c0-2 1.4-3 1.4-5M11 27h10" /></svg>
+            <svg class="food-icon food-icon-carrot" viewBox="0 0 32 32"><path d="m12 11 10 10c-3.8 3.8-8.7 5.8-12.1 2.4C6.5 20 8.2 14.8 12 11Z" /><path d="M13 9c-.2-3.4 1.4-5.6 4-6M14 10c2.7-2.2 5.2-2.4 7.3-.8M16 11c3.3-.4 5.4.7 6.7 3" /></svg>
+            <svg class="food-icon food-icon-apple" viewBox="0 0 32 32"><path d="M16 11c-2.4-2.1-7-2.1-9 1.7-2.4 4.7.9 13.4 5.3 14.3 1.7.3 2.5-.8 3.7-.8s2 1.1 3.7.8c4.4-.9 7.7-9.6 5.3-14.3-2-3.8-6.6-3.8-9-1.7Z" /><path d="M16 10c-.2-3.2 1.3-5.3 4.5-6M17.5 7.2c2.2-1.4 4.2-1.2 5.7.4" /></svg>
+          </span>
+        </div>
         <p>Describe a craving or list what you have. Search combines ingredients, words, and meaning.</p>
 
         <form id="search-form" class="composer">
           <div class="mode-switch" role="group" aria-label="Search input type">
-            <button type="button" class="mode-button active" data-kind="query">Describe a dish</button>
-            <button type="button" class="mode-button" data-kind="ingredients">Use ingredients</button>
+            <button type="button" class="mode-button active" data-kind="query" aria-pressed="true">Describe a dish</button>
+            <button type="button" class="mode-button" data-kind="ingredients" aria-pressed="false">Use ingredients</button>
           </div>
           <label class="sr-only" for="search-input">Recipe search</label>
           <textarea id="search-input" rows="2" maxlength="500" placeholder="Something quick and spicy with chicken" required></textarea>
@@ -34,15 +47,15 @@
         </form>
       </section>
 
-      <section id="results-section" class="results-section" hidden aria-live="polite">
+      <section id="results-section" class="results-section" hidden>
         <div class="results-heading">
           <div>
-            <h2>Best matches</h2>
+            <h2 id="results-title" tabindex="-1">Best matches</h2>
             <p id="results-query" class="results-query"></p>
           </div>
-          <span id="result-meta" class="result-meta"></span>
+          <span id="result-meta" class="result-meta" role="status" aria-live="polite"></span>
         </div>
-        <div id="notice" class="notice" hidden></div>
+        <div id="notice" class="notice" role="status" hidden></div>
         <div id="results" class="results"></div>
         <nav id="pagination" class="pagination" aria-label="Search result pages" hidden></nav>
       </section>
@@ -54,6 +67,59 @@
           <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m6 6 12 12M18 6 6 18" /></svg>
         </button>
         <div id="recipe-detail"></div>
+      </div>
+    </dialog>
+
+    <dialog id="how-dialog" class="how-dialog" aria-labelledby="how-title">
+      <div class="dialog-shell">
+        <button id="how-close" class="dialog-close" type="button" aria-label="Close how it works">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m6 6 12 12M18 6 6 18" /></svg>
+        </button>
+        <article class="how-content">
+          <p class="detail-kicker">Inside the showcase</p>
+          <h2 id="how-title" tabindex="-1">How recipe search works</h2>
+          <p class="how-intro">This app retrieves recipes from a fixed English collection. It does not generate recipes or let a language model invent the answer.</p>
+
+          <section class="how-section">
+            <h3>Two ways to search</h3>
+            <div class="how-options">
+              <div><strong>Describe a dish</strong><span>Write naturally in Swedish, English, Spanish, or another language supported by the multilingual model.</span></div>
+              <div><strong>Use ingredients</strong><span>List what you have. Results may still require additional ingredients.</span></div>
+            </div>
+          </section>
+
+          <section class="how-section">
+            <h3>Four clear ranking signals</h3>
+            <ol class="how-steps">
+              <li><span>1</span><div><strong>Ingredient overlap</strong><p>Canonical ingredient terms reward recipes that cover what you listed.</p></div></li>
+              <li><span>2</span><div><strong>Lexical similarity</strong><p>Character-based TF-IDF catches exact wording and many misspellings.</p></div></li>
+              <li><span>3</span><div><strong>Semantic similarity</strong><p>Local multilingual embeddings connect fuzzy meaning across languages.</p></div></li>
+              <li><span>4</span><div><strong>Hybrid ranking</strong><p>A small weighted formula combines the signals and keeps every score inspectable through the API.</p></div></li>
+            </ol>
+          </section>
+
+          <section class="how-section">
+            <h3>What happens with a broad request?</h3>
+            <p>The app cannot know what you have eaten before. For requests such as “surprise me,” it favors less common ingredient combinations in this collection and reduces repetitive results. Other unclear requests receive varied ideas plus a suggestion for refining the search.</p>
+          </section>
+
+          <section class="how-section">
+            <h3>Where AI fits</h3>
+            <p>The main AI technique is the local multilingual embedding model. An optional Azure language model can help extract constraints from complex wording. It returns structured fields only. The local ranker still chooses the recipes, and the app continues to work when Azure is disabled or unavailable.</p>
+          </section>
+
+          <section class="how-section how-safety">
+            <h3>Privacy, grounding, and limits</h3>
+            <ul>
+              <li>Cloud credentials stay on the server and are supplied through the host’s secret manager. They are never sent to the browser or stored in this repository.</li>
+              <li>If optional Azure interpretation is enabled, the backend may send the search text to that configured service. This application does not persist search queries.</li>
+              <li>Card summaries use only recipe titles and ingredients. Missing history, nutrition, and editorial descriptions are not invented.</li>
+              <li>Ingredient exclusions improve ranking but are not an allergy or dietary safety guarantee.</li>
+            </ul>
+          </section>
+
+          <a class="original-link" href="/docs">Explore the API <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 17 17 7M8 7h9v9" /></svg></a>
+        </article>
       </div>
     </dialog>
 

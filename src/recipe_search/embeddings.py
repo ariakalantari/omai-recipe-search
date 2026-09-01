@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import hashlib
 from collections.abc import Iterable
 from typing import Protocol, cast
 
@@ -70,7 +71,10 @@ class HashEmbeddingBackend:
             normalized = normalize_text(text)
             grams = [normalized[index : index + 3] for index in range(max(1, len(normalized) - 2))]
             for gram in grams:
-                vector[hash(gram) % self._dimensions] += 1.0
+                bucket = int.from_bytes(
+                    hashlib.blake2b(gram.encode(), digest_size=8).digest(), "little"
+                )
+                vector[bucket % self._dimensions] += 1.0
             rows.append(vector)
         if not rows:
             return np.empty((0, self._dimensions), dtype=np.float32)

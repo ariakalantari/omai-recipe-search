@@ -19,7 +19,7 @@ application works without it.
 ### Docker (recommended)
 
 The image downloads the ODC-licensed public Recipe Box development dataset and precomputes the
-indexes during the build. Docker Compose uses a representative 10k slice so the first build fits a
+indexes during the build. Docker Compose uses a balanced 10k slice across all three source files so the first build fits a
 typical laptop. No key is required.
 
 ```bash
@@ -29,7 +29,7 @@ docker compose up --build
 Open http://localhost:8000 for the demo or http://localhost:8000/docs for OpenAPI.
 
 After the GitHub container workflow completes, reviewers can avoid cloning and building. The
-published review image contains the same prebuilt 10k representative slice:
+published review image contains the same prebuilt balanced 10k slice:
 
 ```bash
 docker run --rm -p 8000:8000 ghcr.io/ariakalantari/omai-recipe-search:latest
@@ -73,7 +73,7 @@ or:
 ```
 
 `mode` is `lexical`, `semantic`, or `hybrid`. `ai` is `auto` or `off`. Every result includes the
-three component scores, matched normalized ingredients, and a human-readable reason. Limits are
+three retrieval scores, the discovery distinctiveness score, matched normalized ingredients, and a human-readable reason. Limits are
 bounded to 1–50 and unknown request fields are rejected.
 
 ```bash
@@ -86,13 +86,18 @@ Operational endpoints are `GET /healthz` and `GET /readyz`.
 
 ## Demo UI
 
-The bundled frontend is deliberately small and presentation-focused. A search retrieves the top
+The bundled frontend is deliberately small and presentation-focused. The in-app **How it works**
+guide explains the architecture without exposing credentials or private configuration. A search retrieves the top
 50 ranked recipes once, then shows ten per page so paging is instant and the ranking snapshot stays
-stable. Cards use user-facing relevance bands (`Best`, `Excellent`, `Strong`, and `Relevant`)
-instead of exposing raw score decimals. The underlying component scores remain in the API response
+stable. Cards use confidence-aware labels such as `Best match`, `Closest available`, and
+`Adventurous pick` instead of exposing raw score decimals. The underlying component scores remain in the API response
 for debugging, evaluation, and technical review.
 
-Selecting a card opens a focused recipe detail dialog with the description, timing, yield,
+The raw corpus has instructions but no editorial descriptions. Cards therefore use short,
+deterministic summaries built only from each recipe title and cleaned signature ingredients. They
+never display the first method step as a description or ask an LLM to invent missing facts.
+
+Selecting a card opens a focused recipe detail dialog with the grounded summary, timing, yield,
 ingredients, method, and source link when those fields exist in the dataset. Missing fields are
 stated plainly; the interface does not invent recipe history or instructions.
 
@@ -109,7 +114,8 @@ flowchart LR
     D[Recipe JSON] --> I[Cached indexes]
     I --> R
     R --> G[Explainable hybrid ranker]
-    G --> F
+    G --> V[Discovery diversity when requested]
+    V --> F
 ```
 
 One process owns one immutable recipe collection and three read-only indexes. Startup validates
@@ -120,9 +126,10 @@ Important code surfaces:
 
 - `loader.py`: tolerant JSON ingestion, cleanup, stable IDs, and data-quality reporting;
 - `normalization.py`: units, quantities, aliases, and deterministic ingredient terms;
-- `search.py`: all three indexes, score calculation, and ranking weights;
+- `search.py`: all three indexes, score calculation, discovery scoring, and ranking weights;
 - `query_understanding.py`: heuristic interpretation and the isolated Azure adapter;
 - `service.py`: orchestration, AI rate limiting, fallback metadata, and response assembly;
+- `summaries.py`: factual card summaries from titles and ingredients;
 - `main.py`: FastAPI contract and static frontend hosting.
 
 ## Ranking
@@ -143,14 +150,21 @@ a recipe is penalized for omitting a requested ingredient; the smaller overlap t
 focused recipes. Character 3–4 gram TF-IDF helps misspellings. Cosine similarity over normalized
 multilingual MiniLM vectors bridges Swedish/Spanish queries to English recipe text.
 
-## How AI is used—and why it is narrow
+For broad novelty requests such as `surprise me`, the app switches to a clearly labeled discovery
+strategy. A corpus-relative distinctiveness score favors less common ingredient combinations, then
+a small diversity reranker reduces repeated titles, categories, and ingredient sets. This is not a
+claim about the user's history. Unrecognized low-signal text receives the same varied fallback with
+an honest refinement hint.
+
+## How AI is used and why it is narrow
 
 The primary AI technique is local representation learning: a pretrained multilingual encoder maps
 queries and recipe text into the same vector space. This is the right tool for fuzzy cross-language
 meaning.
 
 Optional Azure GPT-5.6 Luna performs one bounded task: extract mentioned ingredients, exclusions,
-preferences, and a time constraint into strict JSON. It uses low reasoning effort because entity
+preferences, and a time constraint from constraint-heavy wording into strict JSON. Simple natural
+language stays local. It uses low reasoning effort because entity
 extraction is not a hard reasoning problem. The ranker remains deterministic and all returned facts
 come from the dataset.
 
@@ -178,7 +192,7 @@ For Azure Container Apps, prefer no API key:
 3. set the base URL/deployment and `AZURE_OPENAI_USE_ENTRA=true`;
 4. leave `AZURE_OPENAI_API_KEY` unset.
 
-`DefaultAzureCredential` obtains and rotates the runtime token. GitHub Actions deployments should
+`DefaultAzureCredential` supplies a refreshable runtime token provider. GitHub Actions deployments should
 use Azure OIDC federation rather than a long-lived service-principal secret. For a public demo,
 in-process AI limits and Azure quota bound indirect key abuse; production would put a distributed
 gateway quota in front of the service.
@@ -198,10 +212,9 @@ uv run recipe-evaluate --data data/recipes --output evaluation/results/latest.md
 The labels are intentionally small and human-readable. A case is excluded from aggregate metrics
 when the evaluated corpus slice contains no recipe satisfying its label; this avoids blaming the
 ranker for missing data. They establish whether hybrid search helps, not a statistically meaningful
-benchmark. On the verified 10k slice, all three approaches reached Hit@5 of 100% on answerable
-cases; hybrid ranked the first relevant result best (MRR 1.000 versus semantic 0.938 and lexical
-0.875). The impossible request was low-confidence in hybrid mode, while semantic-only still found a
-plausible-looking medium-confidence false positive—an instructive reason to keep multiple signals.
+benchmark. On the verified balanced 10k slice, hybrid reached Hit@5 of 100% and MRR 0.950,
+compared with semantic at 80% and 0.700 and lexical at 90% and 0.750. The evaluation records zero
+exclusion violations and demonstrates both adventurous and low-signal discovery behavior.
 See `evaluation/queries.json` and `evaluation/results/representative-10k.md`.
 
 ## Tests and code quality
@@ -219,11 +232,22 @@ push and pull request; a separate workflow publishes the Docker image to GHCR.
 
 - corrupt records are skipped and counted; a wholly unusable dataset fails startup clearly;
 - cache row counts and numeric values are validated; corrupt caches are rebuilt;
-- semantic download/inference failure degrades to lexical + ingredient search;
+- cache paths include an explicit index schema version so ranking or loader changes cannot silently
+  reuse incompatible matrices;
+- semantic download or query inference failure degrades to lexical plus ingredient search;
 - Azure timeout, quota, dependency, authentication, schema, or JSON errors use heuristics;
-- empty/oversized/malformed requests receive FastAPI `422` responses;
+- empty or malformed validated fields receive compact FastAPI `422` responses;
+- raw API bodies above 16 KiB receive a compact `413` before JSON parsing, and validation errors do
+  not echo the user's full input;
+- local search concurrency is bounded, while optional AI calls also have a separate cost fuse;
+- exact canonical exclusions are removed from returned results, with a clear warning that this is
+  not allergy certification;
+- capped directory loading rotates across source files instead of filling the demo from one file;
+- duplicate normalized titles are suppressed in each result set;
 - low-score results are labeled low-confidence rather than presented as certain;
-- request text and credentials are not logged.
+- request text and credentials are not logged;
+- the main UI sets a restrictive content policy, framing protection, MIME protection, and no-store
+  caching for search responses.
 
 ## Deployment choices
 
@@ -246,8 +270,9 @@ and keep the same runtime value, for example `--build-arg MAX_RECIPES=50000` and
 
 - Ingredient parsing is deliberately approximate. It removes common quantities/units and creates
   unigrams/bigrams; it is not a culinary ontology or full quantity parser.
-- The public Recipe Box surrogate contains useful methods but few descriptions. The focused detail
-  view prioritizes the dependable textual fields rather than presenting an inconsistent image area.
+- The public Recipe Box surrogate contains useful methods but no editorial descriptions in the
+  inspected corpus. Deterministic display summaries are factual but less fluent than human-written
+  recipe introductions.
 - A small alias list helps deterministic Swedish/Spanish ingredient matching. Semantic search is
   the general multilingual mechanism; the alias list should grow from observed evaluation failures.
 - Static weights are transparent but not optimal. With click/judgment data, learn or tune them on a
@@ -256,11 +281,13 @@ and keep the same runtime value, for example `--build-arg MAX_RECIPES=50000` and
   dietary/allergen filtering needs curated metadata and hard exclusions.
 - Index building is intentionally offline and local. Dataset updates require a rebuild rather than
   incremental ingestion.
-- The measured 10k index build took about 4.5 minutes on a 10-core Apple laptop with four worker
-  processes; loading its cached artifacts took 2.3 seconds and peaked around 945 MB RSS. The full
+- The measured 10k Docker index build took about 7.5 minutes on an Apple laptop with one worker;
+  loading its cached artifacts took about 8 seconds and peaked around 945 MB RSS. The full
   corpus should be built once in CI and shipped as an artifact; 3 GB is the conservative minimum
   memory recommendation for full-corpus serving.
 - The in-memory AI limiter is a demo safeguard, not cross-replica abuse prevention.
+- Distinctiveness is relative to this recipe collection. It is not personalization and can still
+  overvalue a rare brand or noisy ingredient token despite frequency caps and filtering.
 - The Azure adapter has contract/fallback tests but was not live-tested against the private Friskly
   deployment because its endpoint, deployment name, identity/role, and secret were not supplied.
   Those values belong in the runtime environment, never in this repository.

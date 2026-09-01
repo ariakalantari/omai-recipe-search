@@ -13,6 +13,10 @@ Last verified: 2026-09-01.
 - A vector database is unnecessary for this dataset size. A normalized NumPy matrix and sparse
   TF-IDF matrix keep the complete retrieval path local and inspectable. A future move to an ANN
   index changes candidate retrieval, not the API or scoring contract.
+- Maximal Marginal Relevance established a simple tradeoff between relevance and non-redundancy.
+  The discovery path uses the same idea in a smaller form by penalizing ingredient and category
+  repetition after corpus-relative distinctiveness scoring:
+  https://aclanthology.org/X98-1025/
 
 ## Azure AI
 
@@ -26,10 +30,30 @@ Last verified: 2026-09-01.
 - An Azure-hosted app should use managed identity and receive the `Cognitive Services OpenAI User`
   role. The application then stores no cloud credential:
   https://learn.microsoft.com/azure/foundry-classic/openai/how-to/managed-identity
+- Current Microsoft examples pass the bearer-token provider callable to the OpenAI client so tokens
+  can refresh, rather than resolving one token at startup:
+  https://learn.microsoft.com/azure/foundry/how-to/develop/sdk-overview
 
 The LLM receives only the user's short query. It is asked for strict structured constraints and is
 never given the recipe dataset. `store=false`, a short timeout, no retries, rate limiting, and a
 deterministic fallback bound privacy, cost, and availability risk.
+
+## Security and accessibility
+
+- OWASP API4:2023 recommends bounding payload sizes, records returned, request frequency, execution
+  resources, and third-party spending. This app bounds raw request bodies, validated fields, result
+  count, local concurrency, and optional AI calls:
+  https://owasp.org/API-Security/editions/2023/en/0xa4-unrestricted-resource-consumption/
+- Strict structured output, no tools, small input and output limits, and deterministic validation
+  reduce the optional LLM attack surface. Prompt injection remains a reason not to give this
+  extractor tools, secrets, or authority:
+  https://cheatsheetseries.owasp.org/cheatsheets/LLM_Prompt_Injection_Prevention_Cheat_Sheet.html
+- W3C's dialog pattern recommends focus inside a modal and restoration to its invoker. The native
+  dialogs follow that behavior and focus their headings when opened:
+  https://www.w3.org/WAI/ARIA/apg/patterns/dialog-modal/
+- The decorative food motion runs once and honors `prefers-reduced-motion`, following W3C guidance
+  for nonessential animation:
+  https://www.w3.org/WAI/WCAG21/Understanding/animation-from-interactions
 
 ## Open source and deployment
 

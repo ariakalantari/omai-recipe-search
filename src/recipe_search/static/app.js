@@ -4,17 +4,25 @@ const submit = document.querySelector("#submit-button");
 const resultsSection = document.querySelector("#results-section");
 const results = document.querySelector("#results");
 const resultMeta = document.querySelector("#result-meta");
+const resultsTitle = document.querySelector("#results-title");
 const resultsQuery = document.querySelector("#results-query");
 const notice = document.querySelector("#notice");
 const pagination = document.querySelector("#pagination");
 const dialog = document.querySelector("#recipe-dialog");
 const dialogClose = document.querySelector("#dialog-close");
 const recipeDetail = document.querySelector("#recipe-detail");
+const howButton = document.querySelector("#how-button");
+const howDialog = document.querySelector("#how-dialog");
+const howClose = document.querySelector("#how-close");
+const howTitle = document.querySelector("#how-title");
 
 const PAGE_SIZE = 10;
 let inputKind = "query";
 let searchResults = [];
 let currentPage = 1;
+let searchMeta = null;
+let activeRequest = null;
+let requestSequence = 0;
 
 const escapeHtml = (value) => String(value ?? "").replace(/[&<>'"]/g, (character) => ({
   "&": "&amp;", "<": "&lt;", ">": "&gt;", "'": "&#39;", '"': "&quot;"
@@ -31,19 +39,19 @@ const formatDuration = (value) => {
 };
 
 const relevanceLabel = (rank) => {
+  if (searchMeta?.strategy === "adventurous") return "Adventurous pick";
+  if (searchMeta?.strategy === "discovery") return "Idea to explore";
+  if (searchMeta?.confidence === "low") return "Closest available";
   if (rank === 1) return "Best match";
-  if (rank <= 3) return "Excellent match";
+  if (searchMeta?.confidence === "medium") return rank <= 3 ? "Top pick" : "Worth exploring";
+  if (rank <= 3) return "Close match";
   if (rank <= 10) return "Strong match";
   return "Relevant match";
 };
 
 const recipeOverview = (recipe) => {
+  if (recipe.summary) return recipe.summary;
   if (recipe.description) return recipe.description;
-  if (recipe.instructions) {
-    const method = recipe.instructions.replace(/\s+/g, " ").trim();
-    const firstSentence = method.match(/^.*?[.!?](?:\s|$)/)?.[0]?.trim();
-    return firstSentence || `${method.slice(0, 150)}${method.length > 150 ? "…" : ""}`;
-  }
   return "Open the recipe to explore its ingredients and available details.";
 };
 
@@ -55,7 +63,9 @@ const recipeFacts = (recipe) => {
 document.querySelectorAll(".mode-button").forEach((button) => {
   button.addEventListener("click", () => {
     document.querySelectorAll(".mode-button").forEach((item) => item.classList.remove("active"));
+    document.querySelectorAll(".mode-button").forEach((item) => item.setAttribute("aria-pressed", "false"));
     button.classList.add("active");
+    button.setAttribute("aria-pressed", "true");
     inputKind = button.dataset.kind;
     input.placeholder = inputKind === "query"
       ? "Something quick and spicy with chicken"
@@ -113,7 +123,13 @@ const renderPage = ({ scroll = false } = {}) => {
   const pageRecipes = searchResults.slice(start, start + PAGE_SIZE);
   results.innerHTML = pageRecipes.map((recipe, offset) => renderRecipe(recipe, start + offset)).join("");
   const end = Math.min(start + PAGE_SIZE, searchResults.length);
-  resultMeta.textContent = `Showing ${start + 1}–${end} of ${searchResults.length} top matches`;
+  if (!pageRecipes.length) {
+    results.innerHTML = '<div class="empty-state"><h3>No useful matches found</h3><p>Try adding an ingredient, cuisine, mood, or cooking time.</p></div>';
+    resultMeta.textContent = "No results";
+    pagination.hidden = true;
+    return;
+  }
+  resultMeta.textContent = `Showing ${start + 1} to ${end} of ${searchResults.length} results`;
   renderPagination();
   if (scroll) resultsSection.scrollIntoView({ behavior: "smooth", block: "start" });
 };
@@ -126,6 +142,7 @@ pagination.addEventListener("click", (event) => {
   if (button.dataset.direction === "previous") currentPage = Math.max(1, currentPage - 1);
   if (button.dataset.direction === "next") currentPage = Math.min(pageCount, currentPage + 1);
   renderPage({ scroll: true });
+  pagination.querySelector('[aria-current="page"]')?.focus({ preventScroll: true });
 });
 
 const metadataMarkup = (recipe) => {
@@ -157,7 +174,7 @@ const openRecipe = (index) => {
     <div class="detail-grid">
       <article class="detail-content">
         <p class="detail-kicker">${relevanceLabel(index + 1)} · Recipe ${index + 1} of ${searchResults.length}</p>
-        <h2 id="detail-title">${escapeHtml(recipe.name)}</h2>
+        <h2 id="detail-title" tabindex="-1">${escapeHtml(recipe.name)}</h2>
         <p class="detail-summary">${escapeHtml(recipeOverview(recipe))}</p>
         ${metadataMarkup(recipe)}
         <section class="detail-section">
@@ -172,6 +189,7 @@ const openRecipe = (index) => {
       </article>
     </div>`;
   dialog.showModal();
+  document.querySelector("#detail-title")?.focus();
 };
 
 results.addEventListener("click", (event) => {
@@ -184,21 +202,38 @@ dialog.addEventListener("click", (event) => {
   if (event.target === dialog) dialog.close();
 });
 
+howButton.addEventListener("click", () => {
+  howDialog.showModal();
+  howTitle.focus();
+});
+howClose.addEventListener("click", () => howDialog.close());
+howDialog.addEventListener("click", (event) => {
+  if (event.target === howDialog) howDialog.close();
+});
+
 form.addEventListener("submit", async (event) => {
   event.preventDefault();
   const value = input.value.trim();
   if (!value) return;
   input.blur();
 
+  activeRequest?.abort();
+  const controller = new AbortController();
+  activeRequest = controller;
+  const sequence = ++requestSequence;
+  const timeout = window.setTimeout(() => controller.abort("timeout"), 15000);
+
   const payload = inputKind === "ingredients"
-    ? { ingredients: value.split(",").map((item) => item.trim()).filter(Boolean), limit: 50 }
+    ? { ingredients: value.split(/[,;\n]+/).map((item) => item.trim()).filter(Boolean), limit: 50 }
     : { query: value, limit: 50 };
 
   submit.disabled = true;
+  form.setAttribute("aria-busy", "true");
   document.body.classList.add("has-results");
   resultsSection.hidden = false;
   pagination.hidden = true;
   notice.hidden = true;
+  notice.setAttribute("role", "status");
   resultsQuery.textContent = `For “${value}”`;
   resultMeta.textContent = "Searching…";
   results.innerHTML = '<div class="recipe-card skeleton"></div><div class="recipe-card skeleton"></div>';
@@ -209,26 +244,56 @@ form.addEventListener("submit", async (event) => {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(payload),
+      signal: controller.signal,
     });
     const data = await response.json();
     if (!response.ok) {
       const message = data.detail?.[0]?.msg || data.detail || "Search request failed";
       throw new Error(message);
     }
+    if (sequence !== requestSequence) return;
     searchResults = data.results;
+    searchMeta = data.meta;
     currentPage = 1;
+    if (data.meta.strategy === "adventurous") resultsTitle.textContent = "Adventurous picks";
+    else if (data.meta.strategy === "discovery") resultsTitle.textContent = "Ideas to explore";
+    else resultsTitle.textContent = "Best matches";
     renderPage();
-    if (data.meta.confidence === "low" || data.meta.query_understanding.warning) {
+    const messages = [];
+    if (data.meta.strategy === "adventurous") {
+      messages.push("We do not know your cooking history, so these picks favor less common ingredient combinations in this collection.");
+    } else if (data.meta.strategy === "discovery" && !data.meta.retrieval_warning) {
+      messages.push("This was a broad request, so these are varied ideas from the collection.");
+    } else if (data.meta.confidence === "low") {
+      messages.push("These are the closest available matches. Add an ingredient, cuisine, mood, or cooking time for better results.");
+    }
+    if (data.meta.query_understanding.warning) messages.push(data.meta.query_understanding.warning);
+    if (data.meta.retrieval_warning) messages.push(data.meta.retrieval_warning);
+    if (messages.length) {
       notice.hidden = false;
-      notice.textContent = data.meta.query_understanding.warning || "These are weak matches—the dataset may not contain what you asked for.";
+      notice.textContent = messages.join(" ");
     }
   } catch (error) {
+    if (sequence !== requestSequence) return;
     searchResults = [];
+    searchMeta = null;
     resultMeta.textContent = "Unable to search";
     results.innerHTML = "";
     notice.hidden = false;
-    notice.textContent = error.message || "Something went wrong. Please try again.";
+    notice.setAttribute("role", "alert");
+    if (error.name === "AbortError") {
+      notice.textContent = "The search took too long. Please try again.";
+    } else if (!navigator.onLine) {
+      notice.textContent = "You appear to be offline. Check your connection and try again.";
+    } else {
+      notice.textContent = error.message || "Something went wrong. Please try again.";
+    }
   } finally {
-    submit.disabled = false;
+    window.clearTimeout(timeout);
+    if (sequence === requestSequence) {
+      submit.disabled = false;
+      form.setAttribute("aria-busy", "false");
+      activeRequest = null;
+    }
   }
 });

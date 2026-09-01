@@ -3,6 +3,7 @@ from __future__ import annotations
 import argparse
 import asyncio
 import json
+import re
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
@@ -23,12 +24,17 @@ class EvaluationRow:
     top_result: str
     first_relevant_rank: int | None
     confidence: str
+    strategy: str
     answerable: bool
+    exclusion_violation: bool
 
 
 def relevant(text: str, expected: list[str], minimum_matches: int) -> bool:
     normalized = canonicalize_known_foods(text)
-    matches = sum(normalize_text(term) in normalized for term in expected)
+    matches = sum(
+        re.search(rf"(?<!\w){re.escape(normalize_text(term))}(?!\w)", normalized) is not None
+        for term in expected
+    )
     return minimum_matches > 0 and matches >= minimum_matches
 
 
@@ -54,6 +60,11 @@ async def evaluate(settings: Settings, query_path: Path, top_k: int) -> list[Eva
                 ai="off",
             )
             response = await service.search(request, client_id="evaluation")
+            excluded_any = case.get("excluded_any", [])
+            exclusion_violation = any(
+                relevant(" ".join(recipe.ingredients), excluded_any, 1)
+                for recipe in response.results
+            )
             rank = next(
                 (
                     index
@@ -72,10 +83,12 @@ async def evaluate(settings: Settings, query_path: Path, top_k: int) -> list[Eva
                     query=case.get("query") or ", ".join(case["ingredients"]),
                     note=case["note"],
                     mode=mode,
-                    top_result=response.results[0].name if response.results else "—",
+                    top_result=response.results[0].name if response.results else "none",
                     first_relevant_rank=rank,
                     confidence=response.meta.confidence,
+                    strategy=response.meta.strategy,
                     answerable=answerable,
+                    exclusion_violation=exclusion_violation,
                 )
             )
     return rows
@@ -88,8 +101,8 @@ def markdown_report(rows: list[EvaluationRow], top_k: int) -> str:
         f"A relevant result is counted when the case's minimum number of hand-written theme terms appears in the top {top_k}.",
         "The impossible query has no relevance label and is inspected through its confidence.",
         "",
-        "| Query | Mode | Top result | First relevant rank | Confidence |",
-        "|---|---|---|---:|---|",
+        "| Query | Mode | Strategy | Top result | First relevant rank | Confidence | Exclusion violation |",
+        "|---|---|---|---|---:|---|---|",
     ]
     for row in rows:
         rank = (
@@ -97,11 +110,12 @@ def markdown_report(rows: list[EvaluationRow], top_k: int) -> str:
             if not row.answerable
             else str(row.first_relevant_rank)
             if row.first_relevant_rank is not None
-            else "—"
+            else "none"
         )
         lines.append(
-            f"| {row.query.replace('|', '/')} | {row.mode} | "
-            f"{row.top_result.replace('|', '/')} | {rank} | {row.confidence} |"
+            f"| {row.query.replace('|', '/')} | {row.mode} | {row.strategy} | "
+            f"{row.top_result.replace('|', '/')} | {rank} | {row.confidence} | "
+            f"{'yes' if row.exclusion_violation else 'no'} |"
         )
 
     lines.extend(["", "## Aggregate (labeled queries)", ""])
@@ -116,6 +130,14 @@ def markdown_report(rows: list[EvaluationRow], top_k: int) -> str:
             else 0.0
         )
         lines.append(f"- **{mode}**: Hit@{top_k} {hit_rate:.0%}, MRR {mrr:.3f}")
+        exclusion_rows = [
+            row for row in rows if row.mode == mode and "without" in row.note.casefold()
+        ]
+        if exclusion_rows:
+            violations = sum(row.exclusion_violation for row in exclusion_rows)
+            lines.append(
+                f"  Exclusion violations: {violations}/{len(exclusion_rows)} evaluated rows"
+            )
     return "\n".join(lines) + "\n"
 
 

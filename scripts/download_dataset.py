@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import argparse
+import hashlib
 import shutil
 import tempfile
 import urllib.request
@@ -18,6 +19,8 @@ EXPECTED_FILES = {
     "LICENSE",
 }
 MAX_UNCOMPRESSED_BYTES = 300 * 1024 * 1024
+MAX_COMPRESSED_BYTES = 64 * 1024 * 1024
+DATASET_SHA256 = "1ae20f3260313d501edf23c22c6f1875e87917f5a8e2ff13b40450719322c81b"
 
 
 def safe_extract(archive: zipfile.ZipFile, output: Path) -> None:
@@ -44,7 +47,16 @@ def download(output: Path, url: str = DATASET_URL) -> None:
     with tempfile.NamedTemporaryFile(suffix=".zip") as temporary:
         request = urllib.request.Request(url, headers={"User-Agent": "omai-recipe-search/0.1"})
         with urllib.request.urlopen(request, timeout=60) as response:
-            shutil.copyfileobj(response, temporary)
+            digest = hashlib.sha256()
+            downloaded = 0
+            while chunk := response.read(1024 * 1024):
+                downloaded += len(chunk)
+                if downloaded > MAX_COMPRESSED_BYTES:
+                    raise RuntimeError("Dataset download is unexpectedly large")
+                digest.update(chunk)
+                temporary.write(chunk)
+        if url == DATASET_URL and digest.hexdigest() != DATASET_SHA256:
+            raise RuntimeError("Dataset archive checksum did not match the pinned source")
         temporary.flush()
         with zipfile.ZipFile(temporary.name) as archive:
             safe_extract(archive, output)
