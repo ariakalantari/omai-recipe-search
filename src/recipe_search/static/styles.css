@@ -43,7 +43,7 @@ svg { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-width:
 .docs-link:focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; }
 
 main { width: min(1040px, calc(100% - 40px)); margin: 0 auto; }
-.hero { text-align: center; padding: 118px 0 72px; transition: padding .24s ease; }
+.hero { min-height: 100svh; display: flex; flex-direction: column; justify-content: center; text-align: center; padding: 96px 0; transition: min-height .24s ease, padding .24s ease; }
 h1 { margin: 0 0 12px; font-size: clamp(40px, 6vw, 58px); line-height: 1.04; font-weight: 650; letter-spacing: -0.052em; transition: font-size .24s ease; }
 .hero > p { max-width: 580px; margin: 0 auto; color: var(--muted); font-size: 17px; line-height: 1.55; }
 
@@ -69,7 +69,7 @@ textarea::placeholder { color: #aaa9a3; }
 .send-button:focus-visible { outline: 2px solid var(--ink); outline-offset: 3px; }
 .send-button:disabled { opacity: .35; cursor: wait; }
 
-.has-results .hero { padding: 34px 0 28px; }
+.has-results .hero { min-height: 0; display: block; padding: 34px 0 28px; }
 .has-results h1 { font-size: clamp(32px, 4vw, 40px); }
 .has-results .hero > p { display: none; }
 .has-results .composer { margin-top: 20px; box-shadow: 0 8px 28px rgba(22,22,18,.07); }
@@ -117,19 +117,14 @@ h2 { margin: 0; font-size: 29px; line-height: 1.15; letter-spacing: -.04em; }
 .page-button:disabled { opacity: .38; cursor: default; }
 .page-button:focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; }
 
-dialog { width: min(980px, calc(100% - 32px)); max-height: min(90vh, 860px); padding: 0; color: var(--ink); background: white; border: 0; border-radius: 26px; box-shadow: 0 28px 90px rgba(16,16,14,.22); overflow: hidden; }
+dialog { width: min(820px, calc(100% - 32px)); max-height: min(90vh, 860px); padding: 0; color: var(--ink); background: white; border: 0; border-radius: 26px; box-shadow: 0 28px 90px rgba(16,16,14,.22); overflow: hidden; }
 dialog:focus { outline: none; }
 dialog::backdrop { background: rgba(22,22,20,.42); backdrop-filter: blur(3px); }
 .dialog-shell { position: relative; }
 .dialog-close { position: absolute; z-index: 3; top: 17px; right: 17px; display: grid; place-items: center; width: 38px; height: 38px; color: var(--ink); background: rgba(255,255,255,.9); border: 1px solid rgba(229,229,225,.9); border-radius: 12px; cursor: pointer; }
 .dialog-close:focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; }
-.detail-grid { display: grid; grid-template-columns: minmax(0, 1.18fr) minmax(320px, .82fr); min-height: 590px; }
+.detail-grid { min-height: 0; }
 .detail-content { max-height: min(90vh, 860px); overflow-y: auto; padding: 42px 44px 48px; }
-.detail-media { position: relative; min-height: 100%; display: grid; place-items: center; overflow: hidden; color: #85847d; background: #f0f0eb; }
-.detail-media img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
-.image-placeholder { display: grid; justify-items: center; gap: 12px; padding: 36px; text-align: center; }
-.image-placeholder svg { width: 40px; height: 40px; stroke-width: 1.35; }
-.image-placeholder span { max-width: 190px; font-size: 13px; line-height: 1.45; }
 .detail-kicker { margin: 0 0 10px; color: var(--muted); font-size: 11px; font-weight: 700; letter-spacing: .09em; text-transform: uppercase; }
 .detail-content h2 { max-width: 610px; padding-right: 16px; font-size: clamp(29px, 4vw, 42px); }
 .detail-summary { margin: 18px 0 0; color: var(--muted); font-size: 15px; line-height: 1.65; }
@@ -150,7 +145,7 @@ dialog::backdrop { background: rgba(22,22,20,.42); backdrop-filter: blur(3px); }
 @media (max-width: 760px) {
   .docs-link { top: 14px; right: 12px; }
   main { width: min(100% - 24px, 1040px); }
-  .hero { padding: 86px 0 50px; }
+  .hero { padding: 72px 0; }
   .hero > p { font-size: 15px; }
   .composer { margin-top: 28px; border-radius: 21px; }
   .has-results .hero { padding-top: 64px; }
@@ -163,9 +158,7 @@ dialog::backdrop { background: rgba(22,22,20,.42); backdrop-filter: blur(3px); }
   .page-button[data-direction="previous"]::after { content: "←"; }
   .page-button[data-direction="next"]::after { content: "→"; }
   dialog { width: calc(100% - 16px); max-height: 94vh; border-radius: 22px; }
-  .detail-grid { grid-template-columns: 1fr; }
-  .detail-content { order: 2; max-height: none; padding: 30px 24px 36px; }
-  .detail-media { order: 1; min-height: 230px; max-height: 32vh; }
+  .detail-content { max-height: none; padding: 30px 24px 36px; }
   .dialog-shell { max-height: 94vh; overflow-y: auto; }
   .detail-content h2 { padding-right: 0; }
   .ingredient-list { columns: 1; }

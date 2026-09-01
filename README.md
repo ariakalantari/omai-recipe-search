@@ -92,9 +92,9 @@ stable. Cards use user-facing relevance bands (`Best`, `Excellent`, `Strong`, an
 instead of exposing raw score decimals. The underlying component scores remain in the API response
 for debugging, evaluation, and technical review.
 
-Selecting a card opens a recipe detail dialog with the description, timing, yield, ingredients,
-method, source link, and image when those fields exist in the dataset. Missing fields are stated
-plainly; the interface does not invent recipe history, instructions, or food photography.
+Selecting a card opens a focused recipe detail dialog with the description, timing, yield,
+ingredients, method, and source link when those fields exist in the dataset. Missing fields are
+stated plainly; the interface does not invent recipe history or instructions.
 
 ## Architecture
 
@@ -246,8 +246,8 @@ and keep the same runtime value, for example `--build-arg MAX_RECIPES=50000` and
 
 - Ingredient parsing is deliberately approximate. It removes common quantities/units and creates
   unigrams/bigrams; it is not a culinary ontology or full quantity parser.
-- The public Recipe Box surrogate contains useful methods but few valid image URLs or descriptions.
-  The detail view uses a neutral missing-image state rather than broken links or generated content.
+- The public Recipe Box surrogate contains useful methods but few descriptions. The focused detail
+  view prioritizes the dependable textual fields rather than presenting an inconsistent image area.
 - A small alias list helps deterministic Swedish/Spanish ingredient matching. Semantic search is
   the general multilingual mechanism; the alias list should grow from observed evaluation failures.
 - Static weights are transparent but not optimal. With click/judgment data, learn or tune them on a

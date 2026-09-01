@@ -153,14 +153,6 @@ const sourceMarkup = (recipe) => recipe.url
 const openRecipe = (index) => {
   const recipe = searchResults[index];
   if (!recipe) return;
-  const media = `
-    <div class="detail-media">
-      <div class="image-placeholder">
-        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 3v7M4 3v4a3 3 0 0 0 6 0V3M7 10v11M16 3v18M16 3c3 2 4 5 4 8h-4" /></svg>
-        <span>Image not included in this recipe record</span>
-      </div>
-      ${recipe.image_url ? `<img src="${escapeHtml(recipe.image_url)}" alt="${escapeHtml(recipe.name)}" />` : ""}
-    </div>`;
   recipeDetail.innerHTML = `
     <div class="detail-grid">
       <article class="detail-content">
@@ -178,10 +170,7 @@ const openRecipe = (index) => {
         </section>
         ${sourceMarkup(recipe)}
       </article>
-      ${media}
     </div>`;
-  const image = recipeDetail.querySelector("img");
-  image?.addEventListener("error", () => image.remove(), { once: true });
   dialog.showModal();
 };
 
@@ -199,6 +188,7 @@ form.addEventListener("submit", async (event) => {
   event.preventDefault();
   const value = input.value.trim();
   if (!value) return;
+  input.blur();
 
   const payload = inputKind === "ingredients"
     ? { ingredients: value.split(",").map((item) => item.trim()).filter(Boolean), limit: 50 }
