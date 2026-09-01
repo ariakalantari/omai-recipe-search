@@ -40,7 +40,13 @@ class FastEmbedBackend:
 
     def encode(self, texts: Iterable[str]) -> FloatMatrix:
         documents = list(texts)
-        parallel = self._parallel_workers if len(documents) >= self._batch_size * 4 else None
+        # FastEmbed's process pool is unnecessary with one worker and can fail in constrained
+        # ARM containers. Treat a value of 1 as an explicit single-process mode.
+        parallel = (
+            self._parallel_workers
+            if self._parallel_workers > 1 and len(documents) >= self._batch_size * 4
+            else None
+        )
         vectors = list(self._model.embed(documents, batch_size=self._batch_size, parallel=parallel))
         if not vectors:
             return np.empty((0, 0), dtype=np.float32)
