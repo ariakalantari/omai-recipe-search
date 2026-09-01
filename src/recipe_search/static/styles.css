@@ -53,13 +53,20 @@ svg { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-width:
 
 main { width: min(1040px, calc(100% - 40px)); margin: 0 auto; }
 .hero { min-height: 100svh; display: flex; flex-direction: column; justify-content: center; text-align: center; padding: 96px 0; transition: min-height .24s ease, padding .24s ease; }
-.title-lockup { display: flex; align-items: center; justify-content: center; gap: 15px; margin: 0 0 12px; }
-h1 { margin: 0; font-size: clamp(40px, 6vw, 58px); line-height: 1.04; font-weight: 650; letter-spacing: -0.052em; transition: font-size .24s ease; }
+.title-lockup { --title-intro-offset: 54px; display: flex; align-items: center; justify-content: center; gap: 15px; margin: 0 0 12px; }
+h1 { margin: 0; font-size: clamp(40px, 6vw, 58px); line-height: 1.04; font-weight: 650; letter-spacing: -0.052em; opacity: 0; transform-origin: center 70%; animation: title-arrive 1.45s cubic-bezier(.2,.8,.2,1) forwards; transition: font-size .24s ease; }
 .food-icons { display: inline-flex; align-items: center; gap: 2px; transform-origin: left center; transition: transform .24s ease; }
 .food-icon { width: 30px; height: 30px; opacity: 0; transform-origin: center 75%; animation: food-arrive .78s cubic-bezier(.2,.82,.25,1.18) forwards; }
-.food-icon-bowl { color: #d4663d; animation-delay: .08s; }
-.food-icon-carrot { color: #d88a2d; animation-delay: .17s; }
-.food-icon-apple { color: #64915f; animation-delay: .26s; }
+.food-icon-bowl { color: #d4663d; animation-delay: 1.16s; }
+.food-icon-carrot { color: #d88a2d; animation-delay: 1.27s; }
+.food-icon-apple { color: #64915f; animation-delay: 1.38s; }
+@keyframes title-arrive {
+  0% { opacity: 0; transform: translateX(var(--title-intro-offset)) translateY(15px) scale(.78); }
+  18% { opacity: 1; transform: translateX(var(--title-intro-offset)) translateY(-6px) scale(1.07, 1.1); }
+  29% { transform: translateX(var(--title-intro-offset)) translateY(2px) scale(.98, .96); }
+  38%, 55% { opacity: 1; transform: translateX(var(--title-intro-offset)) translateY(0) scale(1); }
+  78%, 100% { opacity: 1; transform: translateX(0) translateY(0) scale(1); }
+}
 @keyframes food-arrive {
   0% { opacity: 0; transform: translateY(13px) rotate(-11deg) scale(.65); }
   58% { opacity: 1; transform: translateY(-5px) rotate(6deg) scale(1.08); }
@@ -209,7 +216,7 @@ dialog::backdrop { background: rgba(22,22,20,.42); backdrop-filter: blur(3px); }
   main { width: min(100% - 24px, 1040px); }
   .hero { padding: 72px 0; }
   .hero > p { font-size: 15px; }
-  .title-lockup { gap: 8px; }
+  .title-lockup { --title-intro-offset: 38px; gap: 8px; }
   .food-icons { gap: 0; }
   .food-icon { width: 23px; height: 23px; }
   .composer { margin-top: 28px; border-radius: 21px; }
@@ -233,5 +240,6 @@ dialog::backdrop { background: rgba(22,22,20,.42); backdrop-filter: blur(3px); }
 
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { scroll-behavior: auto !important; transition-duration: .01ms !important; animation-duration: .01ms !important; animation-iteration-count: 1 !important; }
+  h1 { opacity: 1; transform: none; animation: none; }
   .food-icon { opacity: 1; transform: none; animation: none; }
 }
