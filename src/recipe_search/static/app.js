@@ -23,6 +23,7 @@ let currentPage = 1;
 let searchMeta = null;
 let activeRequest = null;
 let requestSequence = 0;
+let lockedScrollY = 0;
 
 const escapeHtml = (value) => String(value ?? "").replace(/[&<>'"]/g, (character) => ({
   "&": "&amp;", "<": "&lt;", ">": "&gt;", "'": "&#39;", '"': "&quot;"
@@ -168,6 +169,27 @@ const sourceMarkup = (recipe) => recipe.url
   ? `<a class="original-link" href="${escapeHtml(recipe.url)}" target="_blank" rel="noreferrer">Open original recipe <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 17 17 7M8 7h9v9" /></svg></a>`
   : "";
 
+const showDialog = (target) => {
+  const scrollbarWidth = Math.max(0, window.innerWidth - document.documentElement.clientWidth);
+  lockedScrollY = window.scrollY;
+  target.showModal();
+  document.body.style.setProperty("--scrollbar-compensation", `${scrollbarWidth}px`);
+  document.body.style.setProperty("--locked-scroll-offset", `-${lockedScrollY}px`);
+  document.documentElement.classList.add("modal-open");
+  document.body.classList.add("modal-open");
+};
+
+const releaseDialogScroll = () => {
+  if (document.querySelector("dialog[open]")) return;
+  document.documentElement.classList.remove("modal-open");
+  document.body.classList.remove("modal-open");
+  document.body.style.removeProperty("--scrollbar-compensation");
+  document.body.style.removeProperty("--locked-scroll-offset");
+  window.scrollTo(0, lockedScrollY);
+};
+
+[dialog, howDialog].forEach((item) => item.addEventListener("close", releaseDialogScroll));
+
 const openRecipe = (index) => {
   const recipe = searchResults[index];
   if (!recipe) return;
@@ -189,7 +211,7 @@ const openRecipe = (index) => {
         ${sourceMarkup(recipe)}
       </article>
     </div>`;
-  dialog.showModal();
+  showDialog(dialog);
   document.querySelector("#detail-title")?.focus();
 };
 
@@ -204,7 +226,7 @@ dialog.addEventListener("click", (event) => {
 });
 
 howButton.addEventListener("click", () => {
-  howDialog.showModal();
+  showDialog(howDialog);
   howTitle.focus();
 });
 howClose.addEventListener("click", () => howDialog.close());
@@ -228,18 +250,15 @@ form.addEventListener("submit", async (event) => {
     ? { ingredients: value.split(/[,;\n]+/).map((item) => item.trim()).filter(Boolean), limit: 50 }
     : { query: value, limit: 50 };
 
+  const hadResults = searchResults.length > 0;
+  const previousResultMeta = resultMeta.textContent;
+
   submit.disabled = true;
   form.setAttribute("aria-busy", "true");
-  document.body.classList.add("has-results");
-  resultsSection.hidden = false;
-  pagination.hidden = true;
   notice.hidden = true;
   notice.setAttribute("role", "status");
   results.classList.remove("animate-results");
-  resultsQuery.textContent = `For “${value}”`;
-  resultMeta.textContent = "Searching…";
-  results.innerHTML = '<div class="recipe-card skeleton"></div><div class="recipe-card skeleton"></div>';
-  window.scrollTo({ top: 0, behavior: "smooth" });
+  if (hadResults) resultMeta.textContent = "Searching…";
 
   try {
     const response = await fetch("/api/search", {
@@ -257,6 +276,9 @@ form.addEventListener("submit", async (event) => {
     searchResults = data.results;
     searchMeta = data.meta;
     currentPage = 1;
+    document.body.classList.add("has-results");
+    resultsSection.hidden = false;
+    resultsQuery.textContent = `For “${value}”`;
     if (data.meta.strategy === "adventurous") resultsTitle.textContent = "Adventurous picks";
     else if (data.meta.strategy === "discovery") resultsTitle.textContent = "Ideas to explore";
     else resultsTitle.textContent = "Best matches";
@@ -275,12 +297,20 @@ form.addEventListener("submit", async (event) => {
       notice.hidden = false;
       notice.textContent = messages.join(" ");
     }
+    window.scrollTo({ top: 0, behavior: "smooth" });
   } catch (error) {
     if (sequence !== requestSequence) return;
-    searchResults = [];
-    searchMeta = null;
-    resultMeta.textContent = "Unable to search";
-    results.innerHTML = "";
+    if (hadResults) {
+      resultMeta.textContent = previousResultMeta;
+    } else {
+      searchResults = [];
+      searchMeta = null;
+      document.body.classList.add("has-results");
+      resultsSection.hidden = false;
+      resultMeta.textContent = "Unable to search";
+      results.innerHTML = "";
+      pagination.hidden = true;
+    }
     notice.hidden = false;
     notice.setAttribute("role", "alert");
     if (error.name === "AbortError") {

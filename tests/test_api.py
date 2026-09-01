@@ -32,11 +32,18 @@ async def test_search_api_and_health(
         assert script.status_code == 200
         assert "renderPage({ animate: true })" in script.text
         assert "renderPage({ scroll: true })" in script.text
+        assert "skeleton" not in script.text
+        assert 'classList.add("modal-open")' in script.text
+        assert 'addEventListener("close", releaseDialogScroll)' in script.text
+        assert "--locked-scroll-offset" in script.text
 
         stylesheet = await client.get("/styles.css")
         assert stylesheet.status_code == 200
         assert ".animate-results .recipe-card" in stylesheet.text
         assert "@keyframes card-arrive" in stylesheet.text
+        assert "html.modal-open, body.modal-open" in stylesheet.text
+        assert "overscroll-behavior: contain" in stylesheet.text
+        assert "@keyframes shimmer" not in stylesheet.text
 
         favicon = await client.get("/favicon.svg")
         assert favicon.status_code == 200
