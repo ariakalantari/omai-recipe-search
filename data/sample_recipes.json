@@ -1,0 +1,103 @@
+[
+  {
+    "name": "Spicy Coconut Cod Curry",
+    "ingredients": ["600 g cod fillets", "1 can coconut milk", "2 red chilies", "1 onion, diced", "2 cloves garlic", "1 tablespoon lime juice", "fresh cilantro"],
+    "source": "development fixture",
+    "prepTime": "PT15M",
+    "cookTime": "PT25M",
+    "recipeYield": "4 servings",
+    "description": "A quick, hot and creamy fish curry."
+  },
+  {
+    "name": "Spanish Garlic Tomato Pasta",
+    "ingredients": ["350 g spaghetti", "5 ripe tomatoes", "4 cloves garlic", "olive oil", "fresh basil", "red pepper flakes"],
+    "source": "development fixture",
+    "prepTime": "PT10M",
+    "cookTime": "PT20M",
+    "recipeYield": "4 servings"
+  },
+  {
+    "name": "Potato, Egg and Onion Tortilla",
+    "ingredients": ["6 eggs", "4 potatoes", "1 yellow onion", "olive oil", "sea salt"],
+    "source": "development fixture",
+    "prepTime": "PT15M",
+    "cookTime": "PT30M",
+    "recipeYield": "6 servings"
+  },
+  {
+    "name": "Quick Spicy Chicken Stir-Fry",
+    "ingredients": ["500 g chicken breast", "2 red chilies", "1 bell pepper", "2 cloves garlic", "soy sauce", "fresh ginger"],
+    "source": "development fixture",
+    "prepTime": "PT10M",
+    "cookTime": "PT15M",
+    "recipeYield": "4 servings"
+  },
+  {
+    "name": "Creamy Vegetarian Mushroom Pie",
+    "ingredients": ["500 g mushrooms", "1 onion", "2 cloves garlic", "heavy cream", "thyme", "puff pastry"],
+    "source": "development fixture",
+    "prepTime": "PT25M",
+    "cookTime": "PT40M",
+    "recipeYield": "6 servings",
+    "description": "Rich vegetarian comfort food for a cold evening."
+  },
+  {
+    "name": "Roasted Vegetable Mac and Cheese",
+    "ingredients": ["macaroni", "cheddar cheese", "milk", "broccoli", "cauliflower", "breadcrumbs"],
+    "source": "development fixture",
+    "prepTime": "PT20M",
+    "cookTime": "PT35M",
+    "recipeYield": "6 servings",
+    "description": "A warming vegetarian comfort dish."
+  },
+  {
+    "name": "Classic Chicken Noodle Soup",
+    "ingredients": ["chicken thighs", "egg noodles", "carrots", "celery", "onion", "chicken stock", "parsley"],
+    "source": "development fixture",
+    "prepTime": "PT20M",
+    "cookTime": "PT50M",
+    "recipeYield": "6 servings"
+  },
+  {
+    "name": "Crispy Garlic Potatoes",
+    "ingredients": ["potatoes", "5 cloves garlic", "olive oil", "rosemary", "sea salt"],
+    "source": "development fixture",
+    "prepTime": "PT10M",
+    "cookTime": "PT45M",
+    "recipeYield": "4 servings"
+  },
+  {
+    "name": "Tomato and White Bean Stew",
+    "ingredients": ["white beans", "chopped tomatoes", "onion", "garlic", "vegetable stock", "smoked paprika"],
+    "source": "development fixture",
+    "prepTime": "PT10M",
+    "cookTime": "PT30M",
+    "recipeYield": "4 servings",
+    "description": "Simple vegan comfort food."
+  },
+  {
+    "name": "Swedish Creamy Salmon Soup",
+    "ingredients": ["salmon", "potatoes", "leek", "carrots", "cream", "dill", "fish stock"],
+    "source": "development fixture",
+    "prepTime": "PT15M",
+    "cookTime": "PT30M",
+    "recipeYield": "4 servings"
+  },
+  {
+    "name": "Black Bean Chili",
+    "ingredients": ["black beans", "tomatoes", "onion", "garlic", "jalapeño pepper", "cumin", "smoked paprika"],
+    "source": "development fixture",
+    "prepTime": "PT15M",
+    "cookTime": "PT40M",
+    "recipeYield": "6 servings",
+    "description": "Spicy vegetarian one-pot dinner."
+  },
+  {
+    "name": "Lemon Herb Baked Cod",
+    "ingredients": ["cod fillets", "lemon", "parsley", "garlic", "olive oil", "black pepper"],
+    "source": "development fixture",
+    "prepTime": "PT10M",
+    "cookTime": "PT18M",
+    "recipeYield": "4 servings"
+  }
+]

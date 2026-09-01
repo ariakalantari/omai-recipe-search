@@ -1,0 +1,72 @@
+[
+  {
+    "id": "sv_fuzzy_cod",
+    "query": "något starkt med torsk och kokosmjölk",
+    "expected_any": ["cod", "coconut milk"],
+    "minimum_matches": 2,
+    "note": "Swedish, fuzzy preference plus two ingredients"
+  },
+  {
+    "id": "en_ingredient_sentence",
+    "query": "I have eggs, potatoes and onion",
+    "expected_any": ["egg", "potato", "onion"],
+    "minimum_matches": 2,
+    "note": "English sentence phrased as pantry contents"
+  },
+  {
+    "id": "es_pasta",
+    "query": "pasta con tomate y ajo",
+    "expected_any": ["pasta", "tomato", "garlic"],
+    "minimum_matches": 2,
+    "note": "Spanish cross-language retrieval"
+  },
+  {
+    "id": "en_fuzzy_chicken",
+    "query": "something quick and spicy with chicken",
+    "expected_any": ["chicken", "spicy", "chili", "jalapeno"],
+    "minimum_matches": 2,
+    "note": "Fuzzy speed and flavor constraints"
+  },
+  {
+    "id": "en_vegetarian_comfort",
+    "query": "vegetarian comfort food",
+    "expected_any": ["vegetarian", "mushroom", "bean", "macaroni"],
+    "minimum_matches": 1,
+    "note": "Conceptual query without explicit ingredients"
+  },
+  {
+    "id": "ingredient_list",
+    "ingredients": ["eggs", "potatoes", "onion"],
+    "expected_any": ["egg", "potato", "onion"],
+    "minimum_matches": 2,
+    "note": "Explicit ingredient-list API form"
+  },
+  {
+    "id": "misspelling",
+    "query": "chikcen with garlick and chillies",
+    "expected_any": ["chicken", "garlic", "chili"],
+    "minimum_matches": 2,
+    "note": "Imperfect spelling"
+  },
+  {
+    "id": "sv_simple",
+    "query": "lax med potatis och dill",
+    "expected_any": ["salmon", "potato", "dill"],
+    "minimum_matches": 2,
+    "note": "Swedish recipe description"
+  },
+  {
+    "id": "es_ingredients",
+    "query": "pollo con cebolla y ajo",
+    "expected_any": ["chicken", "onion", "garlic"],
+    "minimum_matches": 2,
+    "note": "Spanish ingredient query"
+  },
+  {
+    "id": "low_match",
+    "query": "blue unicorn foam with moon dust",
+    "expected_any": [],
+    "minimum_matches": 0,
+    "note": "Impossible query; confidence should be low"
+  }
+]

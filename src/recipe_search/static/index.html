@@ -1,0 +1,72 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="description" content="Explainable multilingual recipe search" />
+    <title>Recipe Search</title>
+    <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+    <link rel="stylesheet" href="/styles.css" />
+  </head>
+  <body>
+    <header class="topbar">
+      <a class="brand" href="/" aria-label="Recipe Search home">
+        <span class="brand-mark" aria-hidden="true">
+          <svg viewBox="0 0 24 24"><path d="M7 3v7M4 3v4a3 3 0 0 0 6 0V3M7 10v11M16 3v18M16 3c3 2 4 5 4 8h-4" /></svg>
+        </span>
+        <span>Recipe Search</span>
+      </a>
+      <a class="docs-link" href="/docs">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 4h14v16H5zM8 8h8M8 12h8M8 16h5" /></svg>
+        API docs
+      </a>
+    </header>
+
+    <main>
+      <section class="hero" aria-labelledby="hero-title">
+        <div class="eyebrow"><span class="status-dot"></span> Multilingual hybrid search</div>
+        <h1 id="hero-title">What should we cook?</h1>
+        <p>Describe a craving or list what you have. Search combines ingredients, words, and meaning.</p>
+
+        <form id="search-form" class="composer">
+          <div class="mode-switch" role="group" aria-label="Search input type">
+            <button type="button" class="mode-button active" data-kind="query">Describe a dish</button>
+            <button type="button" class="mode-button" data-kind="ingredients">Use ingredients</button>
+          </div>
+          <label class="sr-only" for="search-input">Recipe search</label>
+          <textarea id="search-input" rows="2" maxlength="500" placeholder="Something quick and spicy with chicken" required></textarea>
+          <div class="composer-footer">
+            <span id="input-hint">Try English, svenska, or español</span>
+            <button id="submit-button" class="send-button" type="submit" aria-label="Search recipes">
+              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m5 12 7-7 7 7M12 5v14" /></svg>
+            </button>
+          </div>
+        </form>
+
+        <div id="examples" class="examples" aria-label="Example searches">
+          <button data-query="något starkt med torsk och kokosmjölk">Spicy cod på svenska</button>
+          <button data-query="vegetarian comfort food">Vegetarian comfort food</button>
+          <button data-query="pasta con tomate y ajo">Pasta en español</button>
+        </div>
+      </section>
+
+      <section id="results-section" class="results-section" hidden aria-live="polite">
+        <div class="results-heading">
+          <div>
+            <p class="section-label">Best matches</p>
+            <h2 id="results-title">Recipes</h2>
+          </div>
+          <span id="result-meta" class="result-meta"></span>
+        </div>
+        <div id="notice" class="notice" hidden></div>
+        <div id="results" class="results"></div>
+      </section>
+    </main>
+
+    <footer>
+      <span>Local retrieval first. Optional AI only interprets the query.</span>
+      <a href="/docs">OpenAPI</a>
+    </footer>
+    <script src="/app.js" defer></script>
+  </body>
+</html>

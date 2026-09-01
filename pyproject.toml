@@ -1,0 +1,62 @@
+[build-system]
+requires = ["hatchling>=1.27"]
+build-backend = "hatchling.build"
+
+[project]
+name = "omai-recipe-search"
+version = "0.1.0"
+description = "Explainable multilingual hybrid recipe search for the OMAI take-home assignment"
+readme = "README.md"
+requires-python = ">=3.11,<3.14"
+license = { text = "MIT" }
+authors = [{ name = "Aria Kalantari" }]
+dependencies = [
+  "fastapi>=0.116,<1",
+  "ijson>=3.4,<4",
+  "joblib>=1.4,<2",
+  "numpy>=1.26,<3",
+  "pydantic-settings>=2.10,<3",
+  "scikit-learn>=1.5,<2",
+  "uvicorn[standard]>=0.35,<1",
+]
+
+[project.optional-dependencies]
+semantic = ["fastembed>=0.7,<1"]
+azure = ["azure-identity>=1.24,<2", "openai>=2.8,<3"]
+all = [
+  "azure-identity>=1.24,<2",
+  "fastembed>=0.7,<1",
+  "openai>=2.8,<3",
+]
+dev = [
+  "httpx>=0.28,<1",
+  "mypy>=1.17,<2",
+  "pytest>=8.4,<9",
+  "pytest-asyncio>=1.1,<2",
+  "ruff>=0.12,<1",
+]
+
+[project.scripts]
+recipe-evaluate = "recipe_search.evaluation:main"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/recipe_search"]
+
+[tool.pytest.ini_options]
+addopts = "-q"
+testpaths = ["tests"]
+asyncio_mode = "auto"
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B", "SIM", "RUF"]
+ignore = ["E501"]
+
+[tool.mypy]
+python_version = "3.11"
+strict = true
+ignore_missing_imports = true
+packages = ["recipe_search"]

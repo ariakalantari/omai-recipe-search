@@ -1,0 +1,57 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+build/
+dist/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+.venv/
+venv/
+
+# Runtime configuration and credentials
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+*.p12
+credentials*.json
+client_secret*.json
+
+# Derived data and model artifacts
+data/*
+!data/sample_recipes.json
+!data/README.md
+evaluation/results/
+!evaluation/results/
+evaluation/results/*
+!evaluation/results/representative-10k.md
+*.npy
+*.npz
+*.joblib
+
+# Editors and OS files
+.DS_Store
+.idea/
+.vscode/
+*.swp
+
+# AI coding-agent state and instructions (not part of the submission)
+.codex/
+.claude/
+.cursor/
+.agents/
+.aider*
+.continue/
+.roo/
+.windsurf/
+.github/copilot-instructions.md
+AGENTS.md
+CLAUDE.md
+GEMINI.md
+.cursorrules
+.windsurfrules

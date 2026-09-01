@@ -1,0 +1,139 @@
+from __future__ import annotations
+
+from typing import Annotated, Literal
+
+from pydantic import BaseModel, ConfigDict, Field, StringConstraints, model_validator
+
+from recipe_search.domain import InterpretedQuery, RankedRecipe, SearchMode
+
+ShortText = Annotated[str, StringConstraints(strip_whitespace=True, min_length=1, max_length=100)]
+
+
+class SearchRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    query: Annotated[
+        str | None,
+        StringConstraints(strip_whitespace=True, min_length=1, max_length=500),
+    ] = None
+    ingredients: list[ShortText] | None = Field(default=None, min_length=1, max_length=20)
+    limit: int = Field(default=10, ge=1, le=50)
+    mode: SearchMode = SearchMode.HYBRID
+    ai: Literal["auto", "off"] = "auto"
+
+    @model_validator(mode="after")
+    def exactly_one_input(self) -> SearchRequest:
+        if (self.query is None) == (self.ingredients is None):
+            raise ValueError("Provide exactly one of 'query' or 'ingredients'.")
+        return self
+
+
+class ScoreResponse(BaseModel):
+    final: float
+    semantic: float | None
+    lexical: float
+    ingredient: float
+
+
+class MatchReasonResponse(BaseModel):
+    summary: str
+    matched_ingredients: list[str]
+    scores: ScoreResponse
+
+
+class RecipeResponse(BaseModel):
+    id: str
+    name: str
+    ingredients: list[str]
+    source: str | None
+    url: str | None
+    image_url: str | None
+    prep_time: str | None
+    cook_time: str | None
+    recipe_yield: str | None
+    score: float
+    match_reason: MatchReasonResponse
+
+    @classmethod
+    def from_ranked(cls, ranked: RankedRecipe) -> RecipeResponse:
+        recipe = ranked.recipe
+        scores = ranked.scores
+        matched = list(scores.matched_ingredients)
+        if matched:
+            summary = f"Matches {', '.join(matched[:4])}"
+        elif scores.semantic is not None and scores.semantic >= scores.lexical:
+            summary = "Strong meaning-based match"
+        elif scores.lexical > 0:
+            summary = "Matches words in the request"
+        else:
+            summary = "Closest available match"
+        return cls(
+            id=recipe.id,
+            name=recipe.name,
+            ingredients=list(recipe.ingredients),
+            source=recipe.source,
+            url=recipe.url,
+            image_url=recipe.image_url,
+            prep_time=recipe.prep_time,
+            cook_time=recipe.cook_time,
+            recipe_yield=recipe.recipe_yield,
+            score=round(scores.final, 4),
+            match_reason=MatchReasonResponse(
+                summary=summary,
+                matched_ingredients=matched,
+                scores=ScoreResponse(
+                    final=round(scores.final, 4),
+                    semantic=None if scores.semantic is None else round(scores.semantic, 4),
+                    lexical=round(scores.lexical, 4),
+                    ingredient=round(scores.ingredient, 4),
+                ),
+            ),
+        )
+
+
+class QueryUnderstandingResponse(BaseModel):
+    kind: str
+    ingredients: list[str]
+    excluded_ingredients: list[str]
+    preferences: list[str]
+    max_minutes: int | None
+    source: str
+    degraded: bool
+    warning: str | None
+
+    @classmethod
+    def from_domain(cls, query: InterpretedQuery) -> QueryUnderstandingResponse:
+        return cls(
+            kind=query.kind,
+            ingredients=list(query.ingredients),
+            excluded_ingredients=list(query.excluded_ingredients),
+            preferences=list(query.preferences),
+            max_minutes=query.max_minutes,
+            source=query.source,
+            degraded=query.degraded,
+            warning=query.warning,
+        )
+
+
+class SearchMetaResponse(BaseModel):
+    mode: str
+    total_recipes: int
+    returned: int
+    confidence: Literal["high", "medium", "low"]
+    semantic_available: bool
+    ai_available: bool
+    query_understanding: QueryUnderstandingResponse
+
+
+class SearchResponse(BaseModel):
+    query: str
+    results: list[RecipeResponse]
+    meta: SearchMetaResponse
+
+
+class HealthResponse(BaseModel):
+    status: Literal["ok", "degraded"]
+    recipes: int
+    semantic_available: bool
+    ai_available: bool
+    load_warnings: list[str]
