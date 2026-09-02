@@ -167,16 +167,19 @@ const metadataMarkup = (recipe) => {
   return `<div class="detail-meta">${items.map(([label, value]) => `<span><strong>${label}:</strong> ${escapeHtml(value)}</span>`).join("")}</div>`;
 };
 
-const methodMarkup = (recipe) => {
-  if (!recipe.instructions) {
-    return '<p class="missing-detail">Method instructions were not included in this dataset record.</p>';
-  }
+const methodSectionMarkup = (recipe) => {
+  if (!recipe.instructions) return "";
   const steps = recipe.instructions.split(/\n+/).map((step) => step.trim()).filter(Boolean);
-  return `<ol class="method-list">${steps.map((step) => `<li>${escapeHtml(step)}</li>`).join("")}</ol>`;
+  if (!steps.length) return "";
+  return `
+    <section class="detail-section">
+      <h3>Method</h3>
+      <ol class="method-list">${steps.map((step) => `<li>${escapeHtml(step)}</li>`).join("")}</ol>
+    </section>`;
 };
 
 const sourceMarkup = (recipe) => recipe.url
-  ? `<a class="original-link" href="${escapeHtml(recipe.url)}" target="_blank" rel="noreferrer">Open original recipe <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 17 17 7M8 7h9v9" /></svg></a>`
+  ? `<a class="original-link" href="${escapeHtml(recipe.url)}" target="_blank" rel="noreferrer">${recipe.instructions ? "Open original recipe" : "View full recipe and method"} <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 17 17 7M8 7h9v9" /></svg></a>`
   : "";
 
 const showDialog = (target) => {
@@ -214,10 +217,7 @@ const openRecipe = (index) => {
           <h3>Ingredients</h3>
           <ul class="ingredient-list">${recipe.ingredients.map((ingredient) => `<li>${escapeHtml(ingredient)}</li>`).join("")}</ul>
         </section>
-        <section class="detail-section">
-          <h3>Method</h3>
-          ${methodMarkup(recipe)}
-        </section>
+        ${methodSectionMarkup(recipe)}
         ${sourceMarkup(recipe)}
       </article>
     </div>`;

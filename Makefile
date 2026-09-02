@@ -7,7 +7,7 @@ data:
 	uv run python scripts/download_dataset.py
 
 index:
-	RECIPE_DATA_PATH=data/recipes uv run python scripts/build_index.py
+	RECIPE_DATA_PATH=data/assignment uv run python scripts/build_index.py
 
 dev:
 	uv run uvicorn recipe_search.main:app --reload --host 127.0.0.1 --port 8000
@@ -25,7 +25,7 @@ format:
 	uv run ruff format .
 
 evaluate:
-	uv run recipe-evaluate --data data/recipes --max-recipes 10000 --output evaluation/results/representative-10k.md
+	uv run recipe-evaluate --data data/assignment --max-recipes 10000 --output evaluation/results/representative-10k.md
 
 docker-build:
 	docker build -t omai-recipe-search .

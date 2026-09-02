@@ -30,7 +30,7 @@ class Settings(BaseSettings):
     embedding_cache_dir: Path = Path("data/models")
     embedding_batch_size: int = Field(default=256, ge=1, le=2048)
     embedding_index_chunk_size: int = Field(default=16_384, ge=128, le=65_536)
-    embedding_parallel_workers: int = Field(default=2, ge=1, le=16)
+    embedding_parallel_workers: int = Field(default=1, ge=1, le=16)
     lexical_max_features: int = Field(default=40_000, ge=1_000, le=250_000)
 
     azure_openai_base_url: str | None = None

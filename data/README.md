@@ -13,3 +13,6 @@ The archive contains JSON Lines despite its `.json` filename. The download scrip
 pinned SHA-256 digest and extracts it as `.jsonl` so the streaming format is explicit. The
 application remains dataset-agnostic: the loader accepts JSON arrays, JSON objects keyed by recipe
 ID, and JSON Lines.
+
+The archive is extracted into the dedicated `data/assignment` directory. Keeping it separate from
+other local recipe files prevents an old development corpus from being indexed accidentally.

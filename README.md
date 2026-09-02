@@ -327,6 +327,8 @@ review.
 - Static ranking weights are explainable but should eventually be tuned on relevance judgments.
 - About 9% of the supplied records lack editorial descriptions. Their deterministic title and
   ingredient summaries stay factual but are less fluent than source-written copy.
+- The supplied collection almost never includes method steps. The details view shows them when
+  present and otherwise links to the original recipe when a source URL is available.
 - The alias list improves common Swedish and Spanish ingredients; observed failures should drive
   its growth.
 - Index updates are offline rebuilds rather than incremental ingestion.

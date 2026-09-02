@@ -56,28 +56,13 @@ svg { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-width:
 main { width: min(1040px, calc(100% - 40px)); margin: 0 auto; }
 .hero { min-height: 100svh; display: flex; flex-direction: column; justify-content: center; text-align: center; padding: 96px 0; transition: min-height .24s ease, padding .24s ease; }
 .title-lockup { --title-intro-offset: 54px; display: flex; align-items: center; justify-content: center; gap: 15px; margin: 0 0 12px; }
-h1 { margin: 0; font-size: clamp(40px, 6vw, 58px); line-height: 1.04; font-weight: 650; letter-spacing: -0.052em; transform: translateX(var(--title-intro-offset)); animation: title-make-room .34s cubic-bezier(.22,.72,.24,1) .82s forwards; transition: font-size .24s ease; }
+h1 { margin: 0; font-size: clamp(40px, 6vw, 58px); line-height: 1.04; font-weight: 650; letter-spacing: -0.052em; transform: translateX(var(--title-intro-offset)); animation: title-make-room .34s cubic-bezier(.22,.72,.24,1) .48s forwards; transition: font-size .24s ease; }
 .title-word { display: inline-block; white-space: nowrap; }
-.title-word-what { --word-delay: 0s; }
-.title-word-should { --word-delay: .09s; }
-.title-word-we { --word-delay: .22s; }
-.title-word-cook { --word-delay: .27s; }
-.title-letter { --letter-delay: 0s; --letter-rise: 12px; --letter-turn: -4deg; display: inline-block; opacity: 0; transform-origin: center 75%; animation: letter-arrive .42s cubic-bezier(.22,.72,.24,1) calc(var(--word-delay) + var(--letter-delay)) forwards; }
-.title-letter:nth-child(2) { --letter-delay: .024s; --letter-rise: 14px; --letter-turn: 3deg; }
-.title-letter:nth-child(3) { --letter-delay: .048s; --letter-rise: 10px; --letter-turn: -2deg; }
-.title-letter:nth-child(4) { --letter-delay: .072s; --letter-rise: 13px; --letter-turn: 4deg; }
-.title-letter:nth-child(5) { --letter-delay: .096s; --letter-rise: 11px; --letter-turn: -3deg; }
-.title-letter:nth-child(6) { --letter-delay: .12s; --letter-rise: 14px; --letter-turn: 2deg; }
 .food-icons { display: inline-flex; align-items: center; gap: 2px; transform-origin: left center; transition: transform .24s ease; }
 .food-icon { width: 30px; height: 30px; opacity: 0; transform-origin: center 75%; animation: food-arrive .64s cubic-bezier(.2,.82,.25,1.12) forwards; }
-.food-icon-bowl { color: #d4663d; animation-delay: 1.18s; }
-.food-icon-carrot { color: #d88a2d; animation-delay: 1.27s; }
-.food-icon-apple { color: #64915f; animation-delay: 1.36s; }
-@keyframes letter-arrive {
-  0% { opacity: 0; transform: translateX(-8px) translateY(var(--letter-rise)) rotate(var(--letter-turn)) scale(.86); }
-  64% { opacity: 1; transform: translateX(1px) translateY(-2px) rotate(1deg) scale(1.01); }
-  100% { opacity: 1; transform: translateX(0) translateY(0) rotate(0) scale(1); }
-}
+.food-icon-bowl { color: #d4663d; animation-delay: .86s; }
+.food-icon-carrot { color: #d88a2d; animation-delay: .95s; }
+.food-icon-apple { color: #64915f; animation-delay: 1.04s; }
 @keyframes title-make-room {
   from { transform: translateX(var(--title-intro-offset)); }
   to { transform: translateX(0); }
@@ -216,7 +201,6 @@ dialog::backdrop { background: rgba(22,22,20,.42); backdrop-filter: blur(3px); }
 .ingredient-list { columns: 2; column-gap: 34px; }
 .ingredient-list li { break-inside: avoid; padding: 2px 8px 2px 0; }
 .method-list li { padding: 0 0 11px 5px; }
-.missing-detail { margin: 0; color: var(--muted); font-size: 14px; line-height: 1.6; }
 .original-link { display: inline-flex; align-items: center; gap: 7px; margin-top: 28px; color: var(--ink); font-size: 13px; font-weight: 650; text-decoration: none; }
 .original-link svg { width: 14px; height: 14px; }
 
@@ -276,7 +260,6 @@ dialog::backdrop { background: rgba(22,22,20,.42); backdrop-filter: blur(3px); }
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { scroll-behavior: auto !important; transition-duration: .01ms !important; animation-duration: .01ms !important; animation-iteration-count: 1 !important; }
   h1 { opacity: 1; transform: none; animation: none; }
-  .title-letter { opacity: 1; transform: none; animation: none; }
   .food-icon { opacity: 1; transform: none; animation: none; }
   .animate-results .recipe-card { opacity: 1; transform: none; animation: none; }
 }

@@ -65,7 +65,7 @@ def download(output: Path, url: str = DATASET_URL) -> None:
 
 def main() -> None:
     parser = argparse.ArgumentParser()
-    parser.add_argument("--output", type=Path, default=Path("data/recipes"))
+    parser.add_argument("--output", type=Path, default=Path("data/assignment"))
     parser.add_argument("--url", default=DATASET_URL)
     args = parser.parse_args()
     download(args.output, args.url)

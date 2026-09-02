@@ -5,7 +5,7 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
     PIP_DISABLE_PIP_VERSION_CHECK=1 \
     PIP_NO_CACHE_DIR=1 \
-    RECIPE_DATA_PATH=/app/data/recipes \
+    RECIPE_DATA_PATH=/app/data/assignment \
     INDEX_CACHE_DIR=/app/data/cache \
     EMBEDDING_CACHE_DIR=/app/data/models \
     SEMANTIC_ENABLED=true \
@@ -30,9 +30,9 @@ ARG MAX_RECIPES=10000
 ARG EMBEDDING_PARALLEL_WORKERS=1
 ENV MAX_RECIPES=$MAX_RECIPES
 RUN if [ "$INCLUDE_FULL_DATASET" = "1" ]; then \
-      python scripts/download_dataset.py --output data/recipes; \
+      python scripts/download_dataset.py --output data/assignment; \
     else \
-      mkdir -p data/recipes && cp data/sample_recipes.json data/recipes/sample_recipes.json; \
+      mkdir -p data/assignment && cp data/sample_recipes.json data/assignment/sample_recipes.json; \
     fi && \
     if [ "$PREBUILD_INDEX" = "1" ]; then \
       if [ -n "$MAX_RECIPES" ]; then \
