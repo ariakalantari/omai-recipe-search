@@ -17,6 +17,9 @@ const howClose = document.querySelector("#how-close");
 const howTitle = document.querySelector("#how-title");
 
 const PAGE_SIZE = 10;
+const PUBLIC_API_ORIGIN = "https://recipe-search-production-aa6b.up.railway.app";
+const apiOrigin = window.location.hostname === "ariakalantari.github.io" ? PUBLIC_API_ORIGIN : "";
+const apiUrl = (path) => `${apiOrigin}${path}`;
 let inputKind = "query";
 let searchResults = [];
 let currentPage = 1;
@@ -24,6 +27,13 @@ let searchMeta = null;
 let activeRequest = null;
 let requestSequence = 0;
 let lockedScrollY = 0;
+
+document.querySelectorAll("[data-api-path]").forEach((link) => {
+  link.href = apiUrl(link.dataset.apiPath);
+});
+if (apiOrigin) {
+  void fetch(apiUrl("/readyz"), { cache: "no-store" }).catch(() => {});
+}
 
 const escapeHtml = (value) => String(value ?? "").replace(/[&<>'"]/g, (character) => ({
   "&": "&amp;", "<": "&lt;", ">": "&gt;", "'": "&#39;", '"': "&quot;"
@@ -244,7 +254,7 @@ form.addEventListener("submit", async (event) => {
   const controller = new AbortController();
   activeRequest = controller;
   const sequence = ++requestSequence;
-  const timeout = window.setTimeout(() => controller.abort("timeout"), 15000);
+  const timeout = window.setTimeout(() => controller.abort("timeout"), 30000);
 
   const payload = inputKind === "ingredients"
     ? { ingredients: value.split(/[,;\n]+/).map((item) => item.trim()).filter(Boolean), limit: 50 }
@@ -261,7 +271,7 @@ form.addEventListener("submit", async (event) => {
   if (hadResults) resultMeta.textContent = "Searching…";
 
   try {
-    const response = await fetch("/api/search", {
+    const response = await fetch(apiUrl("/api/search"), {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(payload),

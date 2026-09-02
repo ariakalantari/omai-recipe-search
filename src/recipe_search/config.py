@@ -43,6 +43,7 @@ class Settings(BaseSettings):
     ai_requests_per_client_minute: int = Field(default=5, ge=0, le=1_000)
     max_concurrent_searches: int = Field(default=4, ge=1, le=32)
     max_request_body_bytes: int = Field(default=16_384, ge=1024, le=1_048_576)
+    cors_origins: str = ""
 
     low_confidence_threshold: float = Field(default=0.31, ge=0, le=1)
 
@@ -50,6 +51,13 @@ class Settings(BaseSettings):
     def ai_configured(self) -> bool:
         has_auth = bool(self.azure_openai_api_key) or self.azure_openai_use_entra
         return bool(self.azure_openai_base_url and self.azure_openai_deployment and has_auth)
+
+    @property
+    def allowed_cors_origins(self) -> tuple[str, ...]:
+        """Return explicitly configured browser origins without wildcard access."""
+        return tuple(
+            origin.strip().rstrip("/") for origin in self.cors_origins.split(",") if origin.strip()
+        )
 
 
 @lru_cache(maxsize=1)

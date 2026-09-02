@@ -12,17 +12,17 @@ optionally turn fuzzy language into structured constraints, but it never chooses
 application works without it.
 
 [![CI](https://github.com/ariakalantari/omai-recipe-search/actions/workflows/ci.yml/badge.svg)](https://github.com/ariakalantari/omai-recipe-search/actions/workflows/ci.yml)
-[![Open in GitHub Codespaces](https://github.com/codespaces/badge.svg)](https://codespaces.new/ariakalantari/omai-recipe-search?quickstart=1)
+[![Live demo](https://img.shields.io/badge/live_demo-open-171717?style=for-the-badge)](https://ariakalantari.github.io/omai-recipe-search/)
 [![Deploy to Render](https://render.com/images/deploy-to-render-button.svg)](https://render.com/deploy?repo=https://github.com/ariakalantari/omai-recipe-search)
 
 ## Quick start
 
-### GitHub Codespaces (no local setup)
+### Hosted demo
 
-Click **Open in GitHub Codespaces** above. The repository uses the published Docker image, starts
-the API on port 8000, and opens the forwarded web app automatically. This is the fastest
-GitHub-native review path and requires no local clone or image build. A Codespace is an ephemeral
-review environment, not the persistent public deployment.
+Open **[the live GitHub Pages demo](https://ariakalantari.github.io/omai-recipe-search/)**. It
+requires no GitHub login, clone, build, or local dependencies. GitHub Pages serves the static
+interface and calls the same FastAPI application from its public Railway deployment. The API allows
+only the exact Pages origin through CORS. Optional Azure credentials remain backend-only.
 
 ### Docker (recommended)
 
@@ -40,7 +40,8 @@ After the GitHub container workflow completes, reviewers can avoid cloning and b
 published review image contains the same prebuilt balanced 10k slice:
 
 ```bash
-docker run --rm -p 8000:8000 ghcr.io/ariakalantari/omai-recipe-search:latest
+docker run --rm --platform linux/amd64 -p 127.0.0.1:8000:8000 \
+  ghcr.io/ariakalantari/omai-recipe-search:latest
 ```
 
 ### Local Python
@@ -259,8 +260,10 @@ push and pull request; a separate workflow publishes the Docker image to GHCR.
 
 ## Deployment choices
 
+- **Hosted review:** GitHub Pages serves the UI at the repository's `github.io` URL. A Railway
+  service runs the Dockerized API and can sleep while inactive to control demo costs.
 - **Fast review:** public GHCR image, one `docker run` command.
-- **One click:** the Render button uses a 2 GB service and indexes 10k recipes. This is intentionally
+- **Alternative:** the Render button uses a 2 GB service and indexes 10k recipes. This is intentionally
   not labeled free: the measured 10k steady-state process uses about 945 MB. Add Azure secrets in
   Render's dashboard only if the optional interpreter is wanted.
 - **Recommended Azure production path:** Container Apps + managed identity + an Azure OpenAI role.
@@ -269,9 +272,9 @@ The service is stateless after startup. Multiple replicas can share an immutable
 larger scale, store versioned index artifacts in blob storage, load them read-only, and replace the
 NumPy scan with FAISS or a managed vector/search service only after latency measurements justify it.
 
-GitHub Pages is intentionally not used because it only serves static files and cannot run this
-Python API. GitHub Codespaces provides the no-setup GitHub path, while Render provides the stable
-public application URL after deployment.
+GitHub Pages cannot execute Python, so it owns only the static presentation layer. The Railway
+service owns request validation, query understanding, all retrieval indexes, ranking, and optional
+AI access. The public API URL is not a secret; provider keys remain runtime-only server variables.
 
 The 10k Docker default is an operational demo profile, not a search-engine limitation. Local Python
 uses all records when `MAX_RECIPES` is unset. To produce a larger Docker artifact, set the build arg

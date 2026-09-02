@@ -36,6 +36,9 @@ async def test_search_api_and_health(
         assert 'classList.add("modal-open")' in script.text
         assert 'addEventListener("close", releaseDialogScroll)' in script.text
         assert "--locked-scroll-offset" in script.text
+        assert "PUBLIC_API_ORIGIN" in script.text
+        assert 'apiUrl("/api/search")' in script.text
+        assert 'apiUrl("/readyz")' in script.text
 
         stylesheet = await client.get("/styles.css")
         assert stylesheet.status_code == 200
@@ -72,6 +75,40 @@ async def test_search_api_and_health(
         assert response.headers["cache-control"] == "no-store"
         assert landing.headers["x-frame-options"] == "DENY"
         assert "default-src 'self'" in landing.headers["content-security-policy"]
+
+
+@pytest.mark.asyncio
+async def test_cors_allows_only_the_configured_pages_origin(
+    search_service: SearchService, test_settings: Settings
+) -> None:
+    pages_origin = "https://ariakalantari.github.io"
+    settings = test_settings.model_copy(update={"cors_origins": pages_origin})
+    app = create_app(settings, service=search_service)
+    async with (
+        app.router.lifespan_context(app),
+        AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client,
+    ):
+        allowed = await client.options(
+            "/api/search",
+            headers={
+                "Origin": pages_origin,
+                "Access-Control-Request-Method": "POST",
+                "Access-Control-Request-Headers": "content-type",
+            },
+        )
+        assert allowed.status_code == 200
+        assert allowed.headers["access-control-allow-origin"] == pages_origin
+        assert "POST" in allowed.headers["access-control-allow-methods"]
+
+        denied = await client.options(
+            "/api/search",
+            headers={
+                "Origin": "https://attacker.example",
+                "Access-Control-Request-Method": "POST",
+            },
+        )
+        assert denied.status_code == 400
+        assert "access-control-allow-origin" not in denied.headers
 
 
 @pytest.mark.asyncio

@@ -9,6 +9,7 @@ from typing import Final
 
 from fastapi import FastAPI, Request
 from fastapi.exceptions import RequestValidationError
+from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse, RedirectResponse, Response
 from fastapi.staticfiles import StaticFiles
 from starlette.types import ASGIApp, Message, Receive, Scope, Send
@@ -104,6 +105,15 @@ def create_app(
         RequestBodyLimitMiddleware,
         max_bytes=runtime_settings.max_request_body_bytes,
     )
+    if runtime_settings.allowed_cors_origins:
+        app.add_middleware(
+            CORSMiddleware,
+            allow_origins=list(runtime_settings.allowed_cors_origins),
+            allow_credentials=False,
+            allow_methods=["POST", "OPTIONS"],
+            allow_headers=["Content-Type"],
+            max_age=600,
+        )
 
     @app.exception_handler(RequestValidationError)
     async def validation_error_handler(

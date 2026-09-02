@@ -4,9 +4,10 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta name="description" content="Explainable multilingual recipe search" />
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; base-uri 'none'; object-src 'none'; form-action 'self'; img-src 'self' data:; style-src 'self'; script-src 'self'; connect-src 'self' https://recipe-search-production-aa6b.up.railway.app" />
     <title>Recipe Search</title>
-    <link rel="icon" href="/favicon.svg?v=2" type="image/svg+xml" />
-    <link rel="stylesheet" href="/styles.css" />
+    <link rel="icon" href="favicon.svg?v=2" type="image/svg+xml" />
+    <link rel="stylesheet" href="styles.css" />
   </head>
   <body>
     <div class="top-actions">
@@ -14,7 +15,7 @@
         <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M9.8 9a2.4 2.4 0 0 1 4.5 1.2c0 1.8-2.3 2-2.3 3.7M12 17.5h.01" /></svg>
         How it works
       </button>
-      <a class="top-link" href="/docs">
+      <a class="top-link" href="https://recipe-search-production-aa6b.up.railway.app/docs" data-api-path="/docs">
         <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 4h14v16H5zM8 8h8M8 12h8M8 16h5" /></svg>
         API docs
       </a>
@@ -123,11 +124,11 @@
             </ul>
           </section>
 
-          <a class="original-link" href="/docs">Explore the API <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 17 17 7M8 7h9v9" /></svg></a>
+          <a class="original-link" href="https://recipe-search-production-aa6b.up.railway.app/docs" data-api-path="/docs">Explore the API <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 17 17 7M8 7h9v9" /></svg></a>
         </article>
       </div>
     </dialog>
 
-    <script src="/app.js" defer></script>
+    <script src="app.js" defer></script>
   </body>
 </html>
