@@ -16,6 +16,7 @@ dev:
 
 test:
 	uv run pytest
+	node --test tests/test_recipe_format.mjs
 
 lint:
 	uv run ruff check .

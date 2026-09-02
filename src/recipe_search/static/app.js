@@ -1,3 +1,5 @@
+import { formatIngredientText, formatInstructionText } from "./recipe-format.mjs?v=1";
+
 const form = document.querySelector("#search-form");
 const input = document.querySelector("#search-input");
 const submit = document.querySelector("#submit-button");
@@ -178,7 +180,7 @@ const methodSectionMarkup = (recipe) => {
     <section class="detail-section">
       <h3>Method</h3>
       ${provenance}
-      <ol class="method-list">${steps.map((step) => `<li>${escapeHtml(step)}</li>`).join("")}</ol>
+      <ol class="method-list">${steps.map((step) => `<li>${formatInstructionText(step)}</li>`).join("")}</ol>
     </section>`;
 };
 
@@ -219,7 +221,7 @@ const openRecipe = (index) => {
         ${metadataMarkup(recipe)}
         <section class="detail-section">
           <h3>Ingredients</h3>
-          <ul class="ingredient-list">${recipe.ingredients.map((ingredient) => `<li>${escapeHtml(ingredient)}</li>`).join("")}</ul>
+          <ul class="ingredient-list">${recipe.ingredients.map((ingredient) => `<li>${formatIngredientText(ingredient)}</li>`).join("")}</ul>
         </section>
         ${methodSectionMarkup(recipe)}
         ${sourceMarkup(recipe)}

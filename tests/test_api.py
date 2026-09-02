@@ -28,8 +28,8 @@ async def test_search_api_and_health(
         assert 'class="food-icons"' in landing.text
         assert "Multilingual hybrid search" not in landing.text
         assert 'id="recipe-dialog"' in landing.text
-        assert "styles.css?v=4" in landing.text
-        assert "app.js?v=4" in landing.text
+        assert "styles.css?v=5" in landing.text
+        assert 'type="module" src="app.js?v=5"' in landing.text
 
         script = await client.get("/app.js")
         assert script.status_code == 200
@@ -46,6 +46,13 @@ async def test_search_api_and_health(
         assert "PUBLIC_API_ORIGIN" in script.text
         assert 'apiUrl("/api/search")' in script.text
         assert 'apiUrl("/readyz")' in script.text
+        assert "formatIngredientText" in script.text
+        assert "formatInstructionText" in script.text
+
+        formatter = await client.get("/recipe-format.mjs")
+        assert formatter.status_code == 200
+        assert "collectAnnotations" in formatter.text
+        assert "escapeHtml" in formatter.text
 
         stylesheet = await client.get("/styles.css")
         assert stylesheet.status_code == 200
@@ -55,6 +62,8 @@ async def test_search_api_and_health(
         assert "html.modal-open, body.modal-open" in stylesheet.text
         assert "overscroll-behavior: contain" in stylesheet.text
         assert "@keyframes shimmer" not in stylesheet.text
+        assert ".recipe-amount" in stylesheet.text
+        assert ".recipe-time, .recipe-temperature" in stylesheet.text
 
         favicon = await client.get("/favicon.svg")
         assert favicon.status_code == 200

@@ -28,6 +28,10 @@ records that can be matched strictly to an instruction-bearing record from Recip
 | `vegetarian comfort food` | Broad semantic retrieval |
 | `something I haven't had before` | Honest, diversity-oriented discovery fallback |
 
+Recipe details keep the source-backed ingredient and method text intact while visually separating
+measurements, cooking times, and temperatures. The formatting is deterministic, escaped at the
+rendering boundary, and does not use an LLM to rewrite recipe content.
+
 ## The problem and the design choice
 
 A language model could be asked to choose recipes directly, but that would make the core behavior
@@ -330,9 +334,9 @@ make lint
 ```
 
 The suite covers normalization, multilingual aliases, malformed data, scoring, ranking modes,
-exclusions, API validation, CORS, provider fallback, AI limits, static assets, and UI behavior.
-Ruff, mypy, and pytest run in automation. Dependency and security checks are part of submission
-review.
+exclusions, API validation, CORS, provider fallback, AI limits, static assets, UI behavior, and
+safe recipe-text formatting. Ruff, mypy, pytest, and dependency-free JavaScript tests run in
+automation. Dependency and security checks are part of submission review.
 
 ## Trade-offs and next steps
 

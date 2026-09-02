@@ -202,6 +202,8 @@ dialog::backdrop { background: rgba(22,22,20,.42); backdrop-filter: blur(3px); }
 .ingredient-list { columns: 2; column-gap: 34px; }
 .ingredient-list li { break-inside: avoid; padding: 2px 8px 2px 0; }
 .method-list li { padding: 0 0 11px 5px; }
+.recipe-amount { font-style: italic; font-weight: 560; }
+.recipe-time, .recipe-temperature { color: var(--ink); font-weight: 720; }
 .original-link { display: inline-flex; align-items: center; gap: 7px; margin-top: 28px; color: var(--ink); font-size: 13px; font-weight: 650; text-decoration: none; }
 .original-link svg { width: 14px; height: 14px; }
 
