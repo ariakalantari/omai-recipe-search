@@ -14,4 +14,5 @@ services:
       AZURE_OPENAI_DEPLOYMENT: ${AZURE_OPENAI_DEPLOYMENT:-gpt-5.6-luna}
       AZURE_OPENAI_USE_ENTRA: ${AZURE_OPENAI_USE_ENTRA:-false}
       MAX_RECIPES: "10000"
+      REQUIRE_INSTRUCTIONS: "true"
     restart: unless-stopped

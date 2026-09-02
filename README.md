@@ -3,7 +3,9 @@
 An explainable multilingual recipe search system built for the OMAI AI Developer take-home.
 It accepts either a natural-language description or a list of ingredients, then ranks recipes
 using deterministic ingredient matching, lexical retrieval, and local multilingual embeddings.
-The deployed index is built from the exact recipe archive supplied with the assignment.
+The deployed index contains records from the exact recipe archive supplied with the assignment.
+Because that archive almost never includes cooking instructions, the review profile keeps only
+records that can be matched strictly to an instruction-bearing record from Recipe Box.
 
 ## Live demo
 
@@ -50,7 +52,9 @@ flowchart LR
     Q -. optional structured extraction .-> A[Azure OpenAI]
     H --> R[Candidate retrieval]
     A --> R
-    D[Recipe JSON] --> I[Validated cached indexes]
+    M[Recipe Box methods] --> E[Offline strict matcher]
+    D[OMAI recipe JSON] --> E
+    E --> I
     I --> R
     R --> G[Explainable hybrid ranker]
     G --> V[Discovery diversity when requested]
@@ -60,6 +64,11 @@ flowchart LR
 One FastAPI process owns an immutable recipe collection and three read-only indexes. Search work
 runs outside the async event loop. Optional provider calls are time-bounded and fall back to local
 query understanding before retrieval continues.
+
+Method enrichment happens once while the Docker image is built. It is not part of a search request.
+The matcher requires an exact normalized title, a compatible publisher family, at least 90 percent
+ingredient coverage in both directions, and a single unambiguous method. Weak or ambiguous matches
+are rejected. The production setting then enforces 100 percent method coverage at startup.
 
 ### Request flow
 
@@ -152,9 +161,10 @@ Ingredients:
 `mode` is `lexical`, `semantic`, or `hybrid`. `ai` is `auto` or `off`. Unknown fields are
 rejected, input length is bounded, and `limit` must be between 1 and 50.
 
-Every result contains the recipe, normalized component scores, matched ingredients, and a
-human-readable match explanation. The UI converts these details into labels such as `Best match`,
-`Closest available`, and `Adventurous pick` instead of exposing raw decimals to users.
+Every result contains the recipe, method provenance, normalized component scores, matched
+ingredients, and a human-readable match explanation. The UI converts these details into labels
+such as `Best match`, `Closest available`, and `Adventurous pick` instead of exposing raw decimals
+to users.
 
 ```bash
 curl -s https://recipe-search-production-aa6b.up.railway.app/api/search \
@@ -178,8 +188,10 @@ Open [localhost:8000](http://localhost:8000) for the application or
 [localhost:8000/docs](http://localhost:8000/docs) for OpenAPI.
 
 Docker Compose binds only to `127.0.0.1:8000`. The build downloads the exact archive from OMAI's
-public assignment repository, verifies its pinned SHA-256 digest, and precomputes a deterministic
-10,000-recipe sample drawn across the full 173,278-record stream.
+public assignment repository plus the Allrecipes and Epicurious portions of Recipe Box. Every
+input is commit-pinned or checksum-pinned. The offline matcher selects a deterministic 10,000
+OMAI-record profile where every recipe has a high-confidence method match, then precomputes the
+search indexes. Raw build inputs are not needed by the running service.
 
 The published review image contains the same prebuilt index:
 
@@ -215,7 +227,8 @@ AZURE_OPENAI_API_KEY=...
 ```
 
 The browser calls FastAPI, and only FastAPI may call Azure. The public demo does not require Azure
-and currently reports `ai_available: false` through `/healthz`.
+and currently reports `ai_available: false` through `/healthz`. Method restoration is deterministic
+and does not use an API key.
 
 For Azure Container Apps, the preferred production setup is a system-assigned managed identity:
 
@@ -239,9 +252,9 @@ Verified representative 10,000-recipe results:
 
 | Mode | Hit@5 | Mean reciprocal rank |
 |---|---:|---:|
-| Lexical | 80% | 0.650 |
-| Semantic | 90% | 0.692 |
-| Hybrid | **100%** | **0.950** |
+| Lexical | 90% | 0.592 |
+| Semantic | 80% | 0.733 |
+| Hybrid | **100%** | **0.933** |
 
 This is a small architectural sanity check, not a research benchmark. Cases with no satisfying
 recipe in the evaluated corpus are excluded from aggregate metrics. The report also checks hard
@@ -286,10 +299,10 @@ The frontend contains only the public API origin, which is not a secret. Railway
 configuration, performs health checks, and sleeps the demo service while inactive to reduce cost.
 The public deployment uses the same image and retrieval path tested locally.
 
-The 10k Docker profile is an operational demo choice, not a search-engine limit. The capped loader
-uses deterministic reservoir sampling so a source-ordered archive does not bias the demo toward
-only its first publishers. A larger deployment would build versioned indexes once, store them in
-object storage, and load them read-only at startup.
+The 10k Docker profile is an operational demo choice, not a search-engine limit. It is sampled
+across all OMAI records that pass the strict method join. A larger deployment would preserve the
+full OMAI retrieval population, store methods separately, and use a licensed enrichment source or
+an explicitly labeled on-demand generation path for records without publisher instructions.
 
 ## Code map
 
@@ -297,6 +310,7 @@ object storage, and load them read-only at startup.
 src/recipe_search/
   main.py                 FastAPI contract, middleware, health, static UI
   loader.py               tolerant JSON ingestion and data-quality reporting
+  enrichment.py           strict offline method matching and cleanup
   normalization.py        quantities, units, aliases, and ingredient terms
   query_understanding.py  local heuristics and isolated Azure adapter
   search.py               indexes, scoring, ranking, and discovery diversity
@@ -327,13 +341,17 @@ review.
 - Static ranking weights are explainable but should eventually be tuned on relevance judgments.
 - About 9% of the supplied records lack editorial descriptions. Their deterministic title and
   ingredient summaries stay factual but are less fluent than source-written copy.
-- The supplied collection almost never includes method steps. The details view shows them when
-  present and otherwise links to the original recipe when a source URL is available.
+- The supplied collection almost never includes method steps. The review profile recovers them
+  only through strict, provenance-tracked record matching and never through recipe generation.
 - The alias list improves common Swedish and Spanish ingredients; observed failures should drive
   its growth.
 - Index updates are offline rebuilds rather than incremental ingestion.
-- The public service indexes a reproducible 10k sample of the supplied 173k corpus to keep a
-  take-home deployment small enough to start and sleep economically.
+- The method-complete public profile is 87 percent Allrecipes and 13 percent Epicurious or Bon
+  Appetit because those are the OMAI records covered by the auxiliary corpus. This is a deliberate
+  completeness-versus-diversity trade-off and the largest current limitation.
+- Recipe Box uses ODC-By for database rights, but its notice states that individual recipe text may
+  have separate rights. This public take-home should not be treated as a cleared commercial recipe
+  catalog without permission from the original publishers.
 - The in-process rate limiter is appropriate for one demo replica, not a distributed fleet.
 - The full corpus would benefit from versioned object-storage artifacts and measured FAISS or
   managed-vector retrieval only after a linear NumPy scan stops meeting latency targets.
@@ -344,3 +362,4 @@ Intentionally not built: recipe generation, authentication, user histories, agen
 database, microservices, Kubernetes, or a large frontend.
 
 Detailed source-backed technical research is in [`docs/research.md`](docs/research.md).
+Third-party provenance is recorded in [`THIRD_PARTY_NOTICES.md`](THIRD_PARTY_NOTICES.md).

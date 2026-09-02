@@ -79,6 +79,7 @@ class RecipeResponse(BaseModel):
     description: str | None
     summary: str
     instructions: str | None
+    instruction_source: str | None
     score: float
     match_reason: MatchReasonResponse
 
@@ -116,6 +117,7 @@ class RecipeResponse(BaseModel):
             description=recipe.description,
             summary=recipe_summary(recipe),
             instructions=recipe.instructions,
+            instruction_source=recipe.instruction_source,
             score=round(scores.final, 4),
             match_reason=MatchReasonResponse(
                 summary=summary,
@@ -183,4 +185,5 @@ class HealthResponse(BaseModel):
     recipes: int
     semantic_available: bool
     ai_available: bool
+    instruction_coverage: float
     load_warnings: list[str]

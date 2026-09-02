@@ -24,7 +24,8 @@
     "source": "development fixture",
     "prepTime": "PT15M",
     "cookTime": "PT30M",
-    "recipeYield": "6 servings"
+    "recipeYield": "6 servings",
+    "instructions": "Cook the sliced potatoes and onion gently in olive oil until tender. Drain off excess oil. Beat the eggs with salt, fold in the vegetables, and return the mixture to the pan. Cook over low heat until nearly set, then turn and finish the other side."
   },
   {
     "name": "Quick Spicy Chicken Stir-Fry",
@@ -32,7 +33,8 @@
     "source": "development fixture",
     "prepTime": "PT10M",
     "cookTime": "PT15M",
-    "recipeYield": "4 servings"
+    "recipeYield": "4 servings",
+    "instructions": "Cut the chicken and vegetables into even pieces. Stir-fry the chicken in a hot pan until browned. Add the pepper, garlic, ginger, and chilies, then cook until crisp-tender. Add soy sauce and cook until the chicken is fully cooked."
   },
   {
     "name": "Creamy Vegetarian Mushroom Pie",
@@ -41,7 +43,8 @@
     "prepTime": "PT25M",
     "cookTime": "PT40M",
     "recipeYield": "6 servings",
-    "description": "Rich vegetarian comfort food for a cold evening."
+    "description": "Rich vegetarian comfort food for a cold evening.",
+    "instructions": "Cook the onion, garlic, and mushrooms until their liquid has evaporated. Stir in the cream and thyme, then simmer until thickened. Spoon into a baking dish, cover with puff pastry, and bake until the filling is hot and the pastry is deeply golden."
   },
   {
     "name": "Roasted Vegetable Mac and Cheese",
@@ -50,7 +53,8 @@
     "prepTime": "PT20M",
     "cookTime": "PT35M",
     "recipeYield": "6 servings",
-    "description": "A warming vegetarian comfort dish."
+    "description": "A warming vegetarian comfort dish.",
+    "instructions": "Roast the broccoli and cauliflower until lightly browned. Cook the macaroni until just tender. Make a smooth cheese sauce with the milk and cheddar, then combine it with the pasta and vegetables. Top with breadcrumbs and bake until bubbling and golden."
   },
   {
     "name": "Classic Chicken Noodle Soup",
@@ -58,7 +62,8 @@
     "source": "development fixture",
     "prepTime": "PT20M",
     "cookTime": "PT50M",
-    "recipeYield": "6 servings"
+    "recipeYield": "6 servings",
+    "instructions": "Simmer the chicken with the stock, carrots, celery, and onion until the chicken is cooked and tender. Remove and shred the chicken. Cook the noodles in the broth, return the chicken to the pot, and finish with parsley."
   },
   {
     "name": "Crispy Garlic Potatoes",
@@ -66,7 +71,8 @@
     "source": "development fixture",
     "prepTime": "PT10M",
     "cookTime": "PT45M",
-    "recipeYield": "4 servings"
+    "recipeYield": "4 servings",
+    "instructions": "Cut the potatoes into even pieces and parboil until the edges are tender. Drain and roughen the surfaces. Toss with garlic, olive oil, rosemary, and salt, then roast until crisp and deeply golden."
   },
   {
     "name": "Tomato and White Bean Stew",
@@ -75,7 +81,8 @@
     "prepTime": "PT10M",
     "cookTime": "PT30M",
     "recipeYield": "4 servings",
-    "description": "Simple vegan comfort food."
+    "description": "Simple vegan comfort food.",
+    "instructions": "Soften the onion and garlic in a saucepan. Add the smoked paprika, tomatoes, beans, and stock. Simmer until the sauce has thickened and the flavors have blended, then adjust the seasoning before serving."
   },
   {
     "name": "Swedish Creamy Salmon Soup",
@@ -83,7 +90,8 @@
     "source": "development fixture",
     "prepTime": "PT15M",
     "cookTime": "PT30M",
-    "recipeYield": "4 servings"
+    "recipeYield": "4 servings",
+    "instructions": "Simmer the potatoes, leek, and carrots in fish stock until nearly tender. Add the salmon and cook gently until opaque. Stir in the cream without boiling hard, season to taste, and finish with plenty of dill."
   },
   {
     "name": "Black Bean Chili",
@@ -92,7 +100,8 @@
     "prepTime": "PT15M",
     "cookTime": "PT40M",
     "recipeYield": "6 servings",
-    "description": "Spicy vegetarian one-pot dinner."
+    "description": "Spicy vegetarian one-pot dinner.",
+    "instructions": "Cook the onion, garlic, and jalapeño until softened. Stir in the cumin and smoked paprika. Add the tomatoes and black beans, then simmer until thick and richly flavored. Taste and adjust the seasoning before serving."
   },
   {
     "name": "Lemon Herb Baked Cod",
@@ -100,6 +109,7 @@
     "source": "development fixture",
     "prepTime": "PT10M",
     "cookTime": "PT18M",
-    "recipeYield": "4 servings"
+    "recipeYield": "4 servings",
+    "instructions": "Arrange the cod in a lightly oiled baking dish. Combine the lemon, parsley, garlic, olive oil, and black pepper, then spoon the mixture over the fish. Bake until the cod is opaque and flakes easily."
   }
 ]

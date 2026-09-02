@@ -12,7 +12,7 @@ from urllib.parse import urlparse
 
 import ijson
 
-from recipe_search.domain import LoadReport, Recipe
+from recipe_search.domain import InstructionSource, LoadReport, Recipe
 
 
 class DatasetError(RuntimeError):
@@ -150,6 +150,16 @@ def _to_recipe(record: Any, key: str, path: Path) -> Recipe | None:
     image = _safe_url(record.get("image") or record.get("image_url") or record.get("picture_link"))
     stable_key = f"{path.name}:{key}:{name}"
     recipe_id = hashlib.sha1(stable_key.encode(), usedforsecurity=False).hexdigest()[:16]
+    instructions = _instructions(
+        record.get("instructions") or record.get("recipeInstructions") or record.get("method")
+    )
+    raw_instruction_source = _as_text(record.get("instructionSource"))
+    instruction_source: InstructionSource | None = None
+    if instructions:
+        try:
+            instruction_source = InstructionSource(raw_instruction_source or "dataset")
+        except ValueError:
+            instruction_source = InstructionSource.DATASET
     return Recipe(
         id=recipe_id,
         name=name,
@@ -161,9 +171,8 @@ def _to_recipe(record: Any, key: str, path: Path) -> Recipe | None:
         cook_time=_as_text(record.get("cookTime") or record.get("cook_time")),
         recipe_yield=_as_text(record.get("recipeYield") or record.get("yield")),
         description=_as_text(record.get("description")),
-        instructions=_instructions(
-            record.get("instructions") or record.get("recipeInstructions") or record.get("method")
-        ),
+        instructions=instructions,
+        instruction_source=instruction_source,
     )
 
 

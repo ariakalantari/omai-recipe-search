@@ -27,6 +27,11 @@ class SearchStrategy(StrEnum):
     DISCOVERY = "discovery"
 
 
+class InstructionSource(StrEnum):
+    DATASET = "dataset"
+    MATCHED_CORPUS = "matched_corpus"
+
+
 @dataclass(frozen=True, slots=True)
 class Recipe:
     id: str
@@ -40,6 +45,7 @@ class Recipe:
     recipe_yield: str | None = None
     description: str | None = None
     instructions: str | None = None
+    instruction_source: InstructionSource | None = None
 
     @property
     def search_text(self) -> str:

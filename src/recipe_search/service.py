@@ -11,7 +11,7 @@ from typing import Literal
 from recipe_search.config import Settings
 from recipe_search.domain import LoadReport, SearchStrategy
 from recipe_search.embeddings import EmbeddingBackend, FastEmbedBackend
-from recipe_search.loader import load_recipes
+from recipe_search.loader import DatasetError, load_recipes
 from recipe_search.query_understanding import (
     AzureOpenAIQueryInterpreter,
     HeuristicQueryInterpreter,
@@ -188,6 +188,11 @@ def build_search_service(
     recipes, report, fingerprint = load_recipes(
         settings.recipe_data_path, max_recipes=settings.max_recipes
     )
+    missing_instructions = sum(not recipe.instructions for recipe in recipes)
+    if settings.require_instructions and missing_instructions:
+        raise DatasetError(
+            f"Method coverage invariant failed: {missing_instructions} recipes have no instructions"
+        )
     # A slice of a dataset is a different index artifact even when source bytes are identical.
     fingerprint = f"{fingerprint}-{len(recipes)}-selection-v3"
     backend = embedding_backend

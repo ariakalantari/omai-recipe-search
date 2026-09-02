@@ -1,17 +1,26 @@
 from __future__ import annotations
 
 import asyncio
+import json
 import threading
+from pathlib import Path
 
 import pytest
 
 from recipe_search.config import Settings
+from recipe_search.embeddings import HashEmbeddingBackend
+from recipe_search.loader import DatasetError
 from recipe_search.query_understanding import (
     AzureOpenAIQueryInterpreter,
     HeuristicQueryInterpreter,
 )
 from recipe_search.schemas import SearchRequest
-from recipe_search.service import MinuteRateLimiter, SearchCapacityError, SearchService
+from recipe_search.service import (
+    MinuteRateLimiter,
+    SearchCapacityError,
+    SearchService,
+    build_search_service,
+)
 
 
 @pytest.mark.asyncio
@@ -137,3 +146,20 @@ async def test_search_rejects_work_when_local_capacity_is_full(
         await search_service.search(SearchRequest(query="pasta", ai="off"))
     release.set()
     await first
+
+
+def test_required_method_coverage_fails_startup(tmp_path: Path) -> None:
+    dataset = tmp_path / "recipes.json"
+    dataset.write_text(
+        json.dumps([{"name": "Incomplete Soup", "ingredients": ["onion", "stock"]}]),
+        encoding="utf-8",
+    )
+    settings = Settings(
+        recipe_data_path=dataset,
+        index_cache_dir=tmp_path / "cache",
+        embedding_cache_dir=tmp_path / "models",
+        require_instructions=True,
+    )
+
+    with pytest.raises(DatasetError, match="Method coverage invariant failed"):
+        build_search_service(settings, embedding_backend=HashEmbeddingBackend())

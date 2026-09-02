@@ -171,15 +171,19 @@ const methodSectionMarkup = (recipe) => {
   if (!recipe.instructions) return "";
   const steps = recipe.instructions.split(/\n+/).map((step) => step.trim()).filter(Boolean);
   if (!steps.length) return "";
+  const provenance = recipe.instruction_source === "matched_corpus"
+    ? '<p class="method-provenance">Recovered from a high-confidence title and ingredient match in the instruction corpus.</p>'
+    : "";
   return `
     <section class="detail-section">
       <h3>Method</h3>
+      ${provenance}
       <ol class="method-list">${steps.map((step) => `<li>${escapeHtml(step)}</li>`).join("")}</ol>
     </section>`;
 };
 
 const sourceMarkup = (recipe) => recipe.url
-  ? `<a class="original-link" href="${escapeHtml(recipe.url)}" target="_blank" rel="noreferrer">${recipe.instructions ? "Open original recipe" : "View full recipe and method"} <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 17 17 7M8 7h9v9" /></svg></a>`
+  ? `<a class="original-link" href="${escapeHtml(recipe.url)}" target="_blank" rel="noreferrer">Open original recipe <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 17 17 7M8 7h9v9" /></svg></a>`
   : "";
 
 const showDialog = (target) => {

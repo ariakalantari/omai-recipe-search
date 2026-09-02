@@ -5,17 +5,18 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
     PIP_DISABLE_PIP_VERSION_CHECK=1 \
     PIP_NO_CACHE_DIR=1 \
-    RECIPE_DATA_PATH=/app/data/assignment \
+    RECIPE_DATA_PATH=/app/data/enriched \
     INDEX_CACHE_DIR=/app/data/cache \
     EMBEDDING_CACHE_DIR=/app/data/models \
     SEMANTIC_ENABLED=true \
+    REQUIRE_INSTRUCTIONS=true \
     PORT=8000
 
 WORKDIR /app
 
 RUN groupadd --system app && useradd --system --gid app --create-home app
 
-COPY pyproject.toml uv.lock README.md LICENSE ./
+COPY pyproject.toml uv.lock README.md LICENSE THIRD_PARTY_NOTICES.md ./
 COPY src/recipe_search/*.py ./src/recipe_search/
 RUN python -m pip install "uv==0.11.23" && uv sync --frozen --no-dev --extra all
 ENV PATH="/app/.venv/bin:$PATH"
@@ -30,9 +31,17 @@ ARG MAX_RECIPES=10000
 ARG EMBEDDING_PARALLEL_WORKERS=1
 ENV MAX_RECIPES=$MAX_RECIPES
 RUN if [ "$INCLUDE_FULL_DATASET" = "1" ]; then \
-      python scripts/download_dataset.py --output data/assignment; \
+      python scripts/download_dataset.py --output data/assignment && \
+      python scripts/download_method_dataset.py --output data/methods && \
+      python scripts/enrich_dataset.py \
+        --recipes data/assignment/20170107-061401-recipeitems.jsonl \
+        --methods data/methods \
+        --output data/enriched/recipes.jsonl \
+        --limit "$MAX_RECIPES" && \
+      cp data/methods/LICENSE data/recipe-box-LICENSE.md && \
+      rm -rf data/assignment data/methods; \
     else \
-      mkdir -p data/assignment && cp data/sample_recipes.json data/assignment/sample_recipes.json; \
+      mkdir -p data/enriched && cp data/sample_recipes.json data/enriched/sample_recipes.json; \
     fi && \
     if [ "$PREBUILD_INDEX" = "1" ]; then \
       if [ -n "$MAX_RECIPES" ]; then \

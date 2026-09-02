@@ -167,6 +167,11 @@ def create_app(
             recipes=len(current.index.recipes),
             semantic_available=current.index.semantic_available,
             ai_available=current.ai_available,
+            instruction_coverage=round(
+                sum(bool(recipe.instructions) for recipe in current.index.recipes)
+                / len(current.index.recipes),
+                4,
+            ),
             load_warnings=current.load_report.warnings,
         )
 

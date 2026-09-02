@@ -24,6 +24,7 @@ class Settings(BaseSettings):
     recipe_data_path: Path = Path("data/sample_recipes.json")
     index_cache_dir: Path = Path("data/cache")
     max_recipes: int | None = Field(default=None, ge=1)
+    require_instructions: bool = False
 
     semantic_enabled: bool = True
     embedding_model: str = "sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2"

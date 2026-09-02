@@ -31,6 +31,7 @@ def test_loader_accepts_name_and_title_and_skips_bad_records(tmp_path: Path) -> 
     assert [recipe.name for recipe in recipes] == ["Soup", "Pasta"]
     assert recipes[0].ingredients == ("1 onion",)
     assert recipes[0].instructions == "Chop the onion.\nSimmer until tender."
+    assert recipes[0].instruction_source == "dataset"
     assert report.records_skipped == 1
     assert len(fingerprint) == 16
 

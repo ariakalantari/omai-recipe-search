@@ -18,6 +18,7 @@ async def test_search_api_and_health(
         health = await client.get("/healthz")
         assert health.status_code == 200
         assert health.json()["recipes"] == 12
+        assert health.json()["instruction_coverage"] == 1.0
 
         landing = await client.get("/")
         assert landing.status_code == 200
@@ -27,8 +28,8 @@ async def test_search_api_and_health(
         assert 'class="food-icons"' in landing.text
         assert "Multilingual hybrid search" not in landing.text
         assert 'id="recipe-dialog"' in landing.text
-        assert "styles.css?v=3" in landing.text
-        assert "app.js?v=3" in landing.text
+        assert "styles.css?v=4" in landing.text
+        assert "app.js?v=4" in landing.text
 
         script = await client.get("/app.js")
         assert script.status_code == 200
@@ -37,7 +38,8 @@ async def test_search_api_and_health(
         assert "skeleton" not in script.text
         assert "Method instructions were not included" not in script.text
         assert "methodSectionMarkup" in script.text
-        assert "View full recipe and method" in script.text
+        assert "View full recipe and method" not in script.text
+        assert "high-confidence title and ingredient match" in script.text
         assert 'classList.add("modal-open")' in script.text
         assert 'addEventListener("close", releaseDialogScroll)' in script.text
         assert "--locked-scroll-offset" in script.text
@@ -70,6 +72,8 @@ async def test_search_api_and_health(
         assert "description" in body["results"][0]
         assert body["results"][0]["summary"].startswith("A pasta dish featuring")
         assert body["results"][0]["instructions"].startswith("Cook the spaghetti")
+        assert body["results"][0]["instruction_source"] == "dataset"
+        assert all(result["instructions"] for result in body["results"])
         assert body["results"][0]["match_reason"]["scores"].keys() == {
             "final",
             "semantic",

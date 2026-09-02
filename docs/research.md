@@ -11,14 +11,38 @@ Last verified: 2026-09-02.
 - OMAI's supplied archive contains 173,278 JSON Lines records from 33 publishers. Inspection found
   descriptions on about 91% of records, image URLs on about 91%, and timing data on about 77%:
   https://github.com/OMAI-dev/arbetsprov-recept
-- The Docker profile uses deterministic reservoir sampling to select 10,000 recipes across the
-  full source-ordered stream. A vector database is unnecessary at that serving size. A normalized
+- The Docker profile uses deterministic reservoir sampling to select 10,000 method-complete OMAI
+  records across the strict enrichment match pool. A vector database is unnecessary at that
+  serving size. A normalized
   NumPy matrix and sparse TF-IDF matrix keep the complete retrieval path local and inspectable. A
   future move to an ANN index changes candidate retrieval, not the API or scoring contract.
 - Maximal Marginal Relevance established a simple tradeoff between relevance and non-redundancy.
   The discovery path uses the same idea in a smaller form by penalizing ingredient and category
   repetition after corpus-relative distinctiveness scoring:
   https://aclanthology.org/X98-1025/
+
+## Method availability and enrichment
+
+- Direct inspection found only 4 records with `recipeInstructions` in the 173,278-record OMAI
+  archive. In the deterministic 10,000-record profile used before enrichment, none had methods.
+  Embeddings were not responsible because recipe records are not transformed during ranking.
+- Source-page recovery was rejected as the primary solution. A representative check of old source
+  URLs produced 404 responses, dead domains, region restrictions, and unrelated redirects. Runtime
+  scraping would also add latency, SSRF controls, and a new availability dependency.
+- Recipe Box provides instruction-bearing Allrecipes and Epicurious exports:
+  https://github.com/rtlee9/recipe-box and https://github.com/kz882/recipe
+- Across 168,442 usable OMAI records, 34,459 pass the implemented strict join. The rule requires an
+  exact normalized title, compatible source family, at least 90 percent ingredient-term coverage
+  in both directions, and one unambiguous cleaned method.
+- The Epicurious export often stores a full concatenated method followed by the same method split
+  into steps. A deterministic cleanup removes only that duplicated prefix. It does not paraphrase
+  or add instructions.
+- Filtering for method completeness changes the source distribution to about 87 percent
+  Allrecipes and 13 percent Epicurious or Bon Appetit. This is disclosed as a review-profile
+  trade-off, not presented as representative of the full OMAI corpus.
+- The Recipe Box ODC-By notice covers database rights but warns that individual content rights may
+  differ. `THIRD_PARTY_NOTICES.md` records exact sources, commit, hashes, and the redistribution
+  caveat.
 
 ## Azure AI
 
