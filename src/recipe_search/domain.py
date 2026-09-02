@@ -3,6 +3,8 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from enum import StrEnum
 
+from recipe_search.durations import recipe_total_minutes
+
 
 class SearchMode(StrEnum):
     HYBRID = "hybrid"
@@ -46,6 +48,10 @@ class Recipe:
     description: str | None = None
     instructions: str | None = None
     instruction_source: InstructionSource | None = None
+
+    @property
+    def total_minutes(self) -> int | None:
+        return recipe_total_minutes(self.prep_time, self.cook_time)
 
     @property
     def search_text(self) -> str:

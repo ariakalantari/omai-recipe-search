@@ -28,8 +28,8 @@ async def test_search_api_and_health(
         assert 'class="food-icons"' in landing.text
         assert "Multilingual hybrid search" not in landing.text
         assert 'id="recipe-dialog"' in landing.text
-        assert "styles.css?v=5" in landing.text
-        assert 'type="module" src="app.js?v=5"' in landing.text
+        assert "styles.css?v=6" in landing.text
+        assert 'type="module" src="app.js?v=6"' in landing.text
 
         script = await client.get("/app.js")
         assert script.status_code == 200
@@ -48,6 +48,14 @@ async def test_search_api_and_health(
         assert 'apiUrl("/readyz")' in script.text
         assert "formatIngredientText" in script.text
         assert "formatInstructionText" in script.text
+        assert "recipeFacts" in script.text
+        assert "sourceLabel" in script.text
+
+        metadata = await client.get("/recipe-metadata.mjs")
+        assert metadata.status_code == 200
+        assert "compactRecipeYield" in metadata.text
+        assert "total_minutes" in metadata.text
+        assert "Bon Appétit" in metadata.text
 
         formatter = await client.get("/recipe-format.mjs")
         assert formatter.status_code == 200
@@ -82,6 +90,7 @@ async def test_search_api_and_health(
         assert body["results"][0]["summary"].startswith("A pasta dish featuring")
         assert body["results"][0]["instructions"].startswith("Cook the spaghetti")
         assert body["results"][0]["instruction_source"] == "dataset"
+        assert body["results"][0]["total_minutes"] == 30
         assert all(result["instructions"] for result in body["results"])
         assert body["results"][0]["match_reason"]["scores"].keys() == {
             "final",

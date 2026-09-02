@@ -1,4 +1,10 @@
 import { formatIngredientText, formatInstructionText } from "./recipe-format.mjs?v=1";
+import {
+  formatDuration,
+  formatMinutes,
+  recipeFacts,
+  sourceLabel,
+} from "./recipe-metadata.mjs?v=1";
 
 const form = document.querySelector("#search-form");
 const input = document.querySelector("#search-input");
@@ -41,16 +47,6 @@ const escapeHtml = (value) => String(value ?? "").replace(/[&<>'"]/g, (character
   "&": "&amp;", "<": "&lt;", ">": "&gt;", "'": "&#39;", '"': "&quot;"
 })[character]);
 
-const formatDuration = (value) => {
-  if (!value) return null;
-  const match = /^PT(?:(\d+)H)?(?:(\d+)M)?$/i.exec(value);
-  if (!match) return value;
-  const parts = [];
-  if (match[1]) parts.push(`${match[1]} hr`);
-  if (match[2]) parts.push(`${match[2]} min`);
-  return parts.join(" ") || value;
-};
-
 const relevanceLabel = (rank) => {
   if (searchMeta?.strategy === "adventurous") return "Adventurous pick";
   if (searchMeta?.strategy === "discovery") return "Idea to explore";
@@ -66,11 +62,6 @@ const recipeOverview = (recipe) => {
   if (recipe.summary) return recipe.summary;
   if (recipe.description) return recipe.description;
   return "Open the recipe to explore its ingredients and available details.";
-};
-
-const recipeFacts = (recipe) => {
-  const time = formatDuration(recipe.cook_time || recipe.prep_time);
-  return [`${recipe.ingredients.length} ingredients`, time].filter(Boolean).join(" · ");
 };
 
 document.querySelectorAll(".mode-button").forEach((button) => {
@@ -163,6 +154,7 @@ const metadataMarkup = (recipe) => {
   const items = [
     ["Prep", formatDuration(recipe.prep_time)],
     ["Cook", formatDuration(recipe.cook_time)],
+    ["Total", formatMinutes(recipe.total_minutes)],
     ["Makes", recipe.recipe_yield],
   ].filter(([, value]) => value);
   if (!items.length) return "";
@@ -184,9 +176,17 @@ const methodSectionMarkup = (recipe) => {
     </section>`;
 };
 
-const sourceMarkup = (recipe) => recipe.url
-  ? `<a class="original-link" href="${escapeHtml(recipe.url)}" target="_blank" rel="noreferrer">Open original recipe <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 17 17 7M8 7h9v9" /></svg></a>`
-  : "";
+const sourceMarkup = (recipe) => {
+  const label = sourceLabel(recipe.source);
+  if (!label && !recipe.url) return "";
+  const attribution = label
+    ? `<p class="source-attribution">Recipe source: ${escapeHtml(label)}</p>`
+    : "";
+  const link = recipe.url
+    ? `<a class="original-link" href="${escapeHtml(recipe.url)}" target="_blank" rel="noreferrer noopener">View on ${escapeHtml(label || "original source")} <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 17 17 7M8 7h9v9" /></svg></a>`
+    : "";
+  return `<div class="source-block">${attribution}${link}</div>`;
+};
 
 const showDialog = (target) => {
   const scrollbarWidth = Math.max(0, window.innerWidth - document.documentElement.clientWidth);

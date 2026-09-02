@@ -75,6 +75,7 @@ class RecipeResponse(BaseModel):
     image_url: str | None
     prep_time: str | None
     cook_time: str | None
+    total_minutes: int | None
     recipe_yield: str | None
     description: str | None
     summary: str
@@ -113,6 +114,7 @@ class RecipeResponse(BaseModel):
             image_url=recipe.image_url,
             prep_time=recipe.prep_time,
             cook_time=recipe.cook_time,
+            total_minutes=recipe.total_minutes,
             recipe_yield=recipe.recipe_yield,
             description=recipe.description,
             summary=recipe_summary(recipe),

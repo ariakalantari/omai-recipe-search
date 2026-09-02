@@ -7,7 +7,7 @@
     <meta http-equiv="Content-Security-Policy" content="default-src 'self'; base-uri 'none'; object-src 'none'; form-action 'self'; img-src 'self' data:; style-src 'self'; script-src 'self'; connect-src 'self' https://recipe-search-production-aa6b.up.railway.app" />
     <title>Recipe Search</title>
     <link rel="icon" href="favicon.svg?v=2" type="image/svg+xml" />
-    <link rel="stylesheet" href="styles.css?v=5" />
+    <link rel="stylesheet" href="styles.css?v=6" />
   </head>
   <body>
     <div class="top-actions">
@@ -120,6 +120,7 @@
               <li>Cloud credentials stay on the server and are supplied through the host’s secret manager. They are never sent to the browser or stored in this repository.</li>
               <li>If optional Azure interpretation is enabled, the backend may send the search text to that configured service. This application does not persist search queries.</li>
               <li>Cards use the source description when it exists. A factual title-and-ingredient summary is used when it does not.</li>
+              <li>Timing, yield, and publisher attribution come from the recipe record. A total time is shown only when both prep and cook time are known.</li>
               <li>The supplied collection rarely includes method steps. The deployed profile adds them only after an exact title and strict ingredient match against an instruction-bearing corpus. The app does not invent missing methods.</li>
               <li>Ingredient exclusions improve ranking but are not an allergy or dietary safety guarantee.</li>
             </ul>
@@ -130,6 +131,6 @@
       </div>
     </dialog>
 
-    <script type="module" src="app.js?v=5"></script>
+    <script type="module" src="app.js?v=6"></script>
   </body>
 </html>

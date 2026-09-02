@@ -4,11 +4,12 @@ import hashlib
 import html
 import json
 import random
+import re
 from collections import deque
 from collections.abc import Iterator, Mapping
 from pathlib import Path
 from typing import Any
-from urllib.parse import urlparse
+from urllib.parse import urlparse, urlsplit, urlunsplit
 
 import ijson
 
@@ -81,6 +82,17 @@ def _as_text(value: Any) -> str | None:
     return text or None
 
 
+def _description(value: Any) -> str | None:
+    """Remove one balanced pair of display-only double quotes."""
+    text = _as_text(value)
+    if not text:
+        return None
+    quote_pairs = {'"': '"', "“": "”"}
+    if len(text) >= 2 and quote_pairs.get(text[0]) == text[-1]:
+        return text[1:-1].strip() or None
+    return text
+
+
 def _ingredients(value: Any) -> tuple[str, ...]:
     if isinstance(value, str):
         candidates = value.splitlines()
@@ -123,6 +135,45 @@ def _safe_url(value: Any) -> str | None:
     return text if parsed.scheme in {"http", "https"} and parsed.netloc else None
 
 
+def _canonical_recipe_url(url: str | None) -> str | None:
+    """Repair deterministic legacy publisher URLs without guessing missing recipe IDs."""
+    if not url:
+        return None
+    parsed = urlsplit(url)
+    if parsed.username or parsed.password:
+        return url
+    try:
+        if parsed.port not in {None, 80, 443}:
+            return url
+    except ValueError:
+        return url
+    host = (parsed.hostname or "").casefold()
+    path = parsed.path
+
+    if host in {"epicurious.com", "www.epicurious.com"}:
+        match = re.fullmatch(r"/recipes/food/views/(?P<slug>[^/]+)/?", path, re.IGNORECASE)
+        if match:
+            path = f"/recipes/food/views/{match.group('slug').casefold()}"
+            return urlunsplit(("https", "www.epicurious.com", path, parsed.query, ""))
+
+    if host in {"bonappetit.com", "www.bonappetit.com"}:
+        legacy = re.fullmatch(
+            r"/recipes/(?:quick-recipes/)?\d{4}/\d{2}/(?P<slug>[^/]+)/?",
+            path,
+            re.IGNORECASE,
+        )
+        current = re.fullmatch(r"/recipe/(?P<slug>[^/]+)/?", path, re.IGNORECASE)
+        match = legacy or current
+        if match:
+            path = f"/recipe/{match.group('slug').casefold()}"
+            return urlunsplit(("https", "www.bonappetit.com", path, parsed.query, ""))
+
+    if host in {"allrecipes.com", "www.allrecipes.com"}:
+        return urlunsplit(("https", "www.allrecipes.com", path, parsed.query, ""))
+
+    return url
+
+
 def _source(record: Mapping[str, Any], path: Path, url: str | None) -> str | None:
     explicit = _as_text(record.get("source"))
     if explicit:
@@ -146,7 +197,9 @@ def _to_recipe(record: Any, key: str, path: Path) -> Recipe | None:
     )
     if not name or not ingredients:
         return None
-    url = _safe_url(record.get("url") or record.get("source_url") or record.get("link"))
+    url = _canonical_recipe_url(
+        _safe_url(record.get("url") or record.get("source_url") or record.get("link"))
+    )
     image = _safe_url(record.get("image") or record.get("image_url") or record.get("picture_link"))
     stable_key = f"{path.name}:{key}:{name}"
     recipe_id = hashlib.sha1(stable_key.encode(), usedforsecurity=False).hexdigest()[:16]
@@ -170,7 +223,7 @@ def _to_recipe(record: Any, key: str, path: Path) -> Recipe | None:
         prep_time=_as_text(record.get("prepTime") or record.get("prep_time")),
         cook_time=_as_text(record.get("cookTime") or record.get("cook_time")),
         recipe_yield=_as_text(record.get("recipeYield") or record.get("yield")),
-        description=_as_text(record.get("description")),
+        description=_description(record.get("description")),
         instructions=instructions,
         instruction_source=instruction_source,
     )

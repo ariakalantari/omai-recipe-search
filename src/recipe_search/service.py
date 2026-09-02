@@ -194,7 +194,7 @@ def build_search_service(
             f"Method coverage invariant failed: {missing_instructions} recipes have no instructions"
         )
     # A slice of a dataset is a different index artifact even when source bytes are identical.
-    fingerprint = f"{fingerprint}-{len(recipes)}-selection-v3"
+    fingerprint = f"{fingerprint}-{len(recipes)}-selection-v4"
     backend = embedding_backend
     if settings.semantic_enabled and backend is None:
         try:
