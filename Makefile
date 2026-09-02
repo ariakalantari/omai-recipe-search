@@ -10,7 +10,7 @@ index:
 	RECIPE_DATA_PATH=data/recipes uv run python scripts/build_index.py
 
 dev:
-	uv run uvicorn recipe_search.main:app --reload --host 0.0.0.0 --port 8000
+	uv run uvicorn recipe_search.main:app --reload --host 127.0.0.1 --port 8000
 
 test:
 	uv run pytest
@@ -31,4 +31,4 @@ docker-build:
 	docker build -t omai-recipe-search .
 
 docker-run:
-	docker run --rm -p 8000:8000 --env-file .env omai-recipe-search
+	docker run --rm -p 127.0.0.1:8000:8000 --env-file .env omai-recipe-search

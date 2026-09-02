@@ -3,6 +3,7 @@
 An explainable multilingual recipe search system built for the OMAI AI Developer take-home.
 It accepts either a natural-language description or a list of ingredients, then ranks recipes
 using deterministic ingredient matching, lexical retrieval, and local multilingual embeddings.
+The deployed index is built from the exact recipe archive supplied with the assignment.
 
 ## Live demo
 
@@ -176,8 +177,9 @@ docker compose up --build
 Open [localhost:8000](http://localhost:8000) for the application or
 [localhost:8000/docs](http://localhost:8000/docs) for OpenAPI.
 
-Docker Compose binds only to `127.0.0.1:8000`. The build downloads the ODC-licensed Recipe Box
-development dataset and precomputes a balanced 10,000-recipe index.
+Docker Compose binds only to `127.0.0.1:8000`. The build downloads the exact archive from OMAI's
+public assignment repository, verifies its pinned SHA-256 digest, and precomputes a deterministic
+10,000-recipe sample drawn across the full 173,278-record stream.
 
 The published review image contains the same prebuilt index:
 
@@ -233,12 +235,12 @@ Swedish, Spanish, ingredient-list, fuzzy, misspelled, and impossible queries.
 make evaluate
 ```
 
-Verified balanced 10,000-recipe results:
+Verified representative 10,000-recipe results:
 
 | Mode | Hit@5 | Mean reciprocal rank |
 |---|---:|---:|
-| Lexical | 90% | 0.750 |
-| Semantic | 80% | 0.700 |
+| Lexical | 80% | 0.650 |
+| Semantic | 90% | 0.692 |
 | Hybrid | **100%** | **0.950** |
 
 This is a small architectural sanity check, not a research benchmark. Cases with no satisfying
@@ -284,9 +286,10 @@ The frontend contains only the public API origin, which is not a secret. Railway
 configuration, performs health checks, and sleeps the demo service while inactive to reduce cost.
 The public deployment uses the same image and retrieval path tested locally.
 
-The current 10k service uses about 945 MB of memory. The 10k Docker profile is an operational demo
-choice, not a search-engine limit. A larger deployment would build versioned indexes once, store
-them in object storage, and load them read-only at startup.
+The 10k Docker profile is an operational demo choice, not a search-engine limit. The capped loader
+uses deterministic reservoir sampling so a source-ordered archive does not bias the demo toward
+only its first publishers. A larger deployment would build versioned indexes once, store them in
+object storage, and load them read-only at startup.
 
 ## Code map
 
@@ -298,7 +301,7 @@ src/recipe_search/
   query_understanding.py  local heuristics and isolated Azure adapter
   search.py               indexes, scoring, ranking, and discovery diversity
   service.py              orchestration, fallbacks, limits, response assembly
-  summaries.py            factual card summaries from titles and ingredients
+  summaries.py            source descriptions and factual summary fallbacks
   static/                 dependency-free browser interface
 evaluation/               query set and comparison harness
 scripts/                  dataset download and offline index build
@@ -322,10 +325,13 @@ review.
 - Ingredient parsing removes common quantities and units, but it is not a culinary ontology.
 - Vegetarian and similar preferences are ranking signals, not certified dietary filters.
 - Static ranking weights are explainable but should eventually be tuned on relevance judgments.
-- Deterministic card summaries stay factual but are less fluent than editorial descriptions.
+- About 9% of the supplied records lack editorial descriptions. Their deterministic title and
+  ingredient summaries stay factual but are less fluent than source-written copy.
 - The alias list improves common Swedish and Spanish ingredients; observed failures should drive
   its growth.
 - Index updates are offline rebuilds rather than incremental ingestion.
+- The public service indexes a reproducible 10k sample of the supplied 173k corpus to keep a
+  take-home deployment small enough to start and sleep economically.
 - The in-process rate limiter is appropriate for one demo replica, not a distributed fleet.
 - The full corpus would benefit from versioned object-storage artifacts and measured FAISS or
   managed-vector retrieval only after a linear NumPy scan stops meeting latency targets.

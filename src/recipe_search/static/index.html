@@ -119,7 +119,7 @@
             <ul>
               <li>Cloud credentials stay on the server and are supplied through the host’s secret manager. They are never sent to the browser or stored in this repository.</li>
               <li>If optional Azure interpretation is enabled, the backend may send the search text to that configured service. This application does not persist search queries.</li>
-              <li>Card summaries use only recipe titles and ingredients. Missing history, nutrition, and editorial descriptions are not invented.</li>
+              <li>Cards use the source description when it exists. A factual title-and-ingredient summary is used when it does not. Missing history or nutrition is never invented.</li>
               <li>Ingredient exclusions improve ranking but are not an allergy or dietary safety guarantee.</li>
             </ul>
           </section>

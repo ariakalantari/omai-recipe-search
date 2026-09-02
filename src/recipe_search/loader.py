@@ -1,7 +1,9 @@
 from __future__ import annotations
 
 import hashlib
+import html
 import json
+import random
 from collections import deque
 from collections.abc import Iterator, Mapping
 from pathlib import Path
@@ -15,6 +17,17 @@ from recipe_search.domain import LoadReport, Recipe
 
 class DatasetError(RuntimeError):
     """Raised when no usable dataset can be loaded."""
+
+
+def _decode_entities(value: str) -> str:
+    """Decode the single and double encoded HTML entities present in the source corpus."""
+    decoded = value
+    for _ in range(2):
+        current = html.unescape(decoded)
+        if current == decoded:
+            break
+        decoded = current
+    return decoded
 
 
 def resolve_data_files(path: Path) -> list[Path]:
@@ -64,7 +77,7 @@ def _iter_records(path: Path) -> Iterator[tuple[str, Any]]:
 def _as_text(value: Any) -> str | None:
     if value is None:
         return None
-    text = str(value).strip()
+    text = _decode_entities(str(value)).strip()
     return text or None
 
 
@@ -77,7 +90,7 @@ def _ingredients(value: Any) -> tuple[str, ...]:
         return ()
     cleaned: list[str] = []
     for candidate in candidates:
-        line = candidate.replace("ADVERTISEMENT", "").strip(" \t,-")
+        line = _decode_entities(candidate).replace("ADVERTISEMENT", "").strip(" \t,-")
         if line:
             cleaned.append(line)
     return tuple(cleaned)
@@ -98,7 +111,7 @@ def _instructions(value: Any) -> str | None:
                 parts.append(text)
     else:
         return None
-    cleaned = [part.replace("ADVERTISEMENT", "").strip() for part in parts]
+    cleaned = [_decode_entities(part).replace("ADVERTISEMENT", "").strip() for part in parts]
     return "\n".join(part for part in cleaned if part) or None
 
 
@@ -165,7 +178,12 @@ def load_recipes(
     active: deque[tuple[Path, Iterator[tuple[str, Any]]]] = deque(
         (file_path, iter(_iter_records(file_path))) for file_path in files
     )
-    while active and (max_recipes is None or len(recipes) < max_recipes):
+    # A capped single-file corpus is sampled across the full stream so a source-ordered JSONL
+    # archive does not turn the demo into an accidental sample of only its first publishers.
+    sample_single_file = max_recipes is not None and len(files) == 1
+    sampler = random.Random(20_260_902)
+    valid_records_seen = 0
+    while active and (sample_single_file or max_recipes is None or len(recipes) < max_recipes):
         file_path, records = active.popleft()
         try:
             key, record = next(records)
@@ -180,7 +198,13 @@ def load_recipes(
         if recipe is None:
             report.records_skipped += 1
             continue
-        recipes.append(recipe)
+        valid_records_seen += 1
+        if not sample_single_file or max_recipes is None or len(recipes) < max_recipes:
+            recipes.append(recipe)
+            continue
+        replacement = sampler.randrange(valid_records_seen)
+        if replacement < max_recipes:
+            recipes[replacement] = recipe
     if not recipes:
         raise DatasetError("The dataset contained no usable recipes.")
     report.recipes_loaded = len(recipes)

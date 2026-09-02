@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Download the public Recipe Box dataset used for development and evaluation."""
+"""Download the recipe archive supplied with the OMAI assignment."""
 
 from __future__ import annotations
 
@@ -11,37 +11,37 @@ import urllib.request
 import zipfile
 from pathlib import Path
 
-DATASET_URL = "https://eightportions.com/recipes_raw.zip"
-EXPECTED_FILES = {
-    "recipes_raw_nosource_ar.json",
-    "recipes_raw_nosource_epi.json",
-    "recipes_raw_nosource_fn.json",
-    "LICENSE",
-}
-MAX_UNCOMPRESSED_BYTES = 300 * 1024 * 1024
+DATASET_URL = (
+    "https://raw.githubusercontent.com/OMAI-dev/arbetsprov-recept/main/"
+    "20170107-061401-recipeitems.json.zip"
+)
+ARCHIVE_MEMBER = "20170107-061401-recipeitems.json"
+OUTPUT_FILE = "20170107-061401-recipeitems.jsonl"
+EXPECTED_UNCOMPRESSED_BYTES = 141_698_284
+MAX_UNCOMPRESSED_BYTES = 180 * 1024 * 1024
 MAX_COMPRESSED_BYTES = 64 * 1024 * 1024
-DATASET_SHA256 = "1ae20f3260313d501edf23c22c6f1875e87917f5a8e2ff13b40450719322c81b"
+DATASET_SHA256 = "4149d2d8677f26323b6da0300014c155abe1ba1f78af2c5c8e4f63f0b7df57f1"
 
 
 def safe_extract(archive: zipfile.ZipFile, output: Path) -> None:
-    names = {Path(info.filename).name for info in archive.infolist() if not info.is_dir()}
-    missing = EXPECTED_FILES - names
-    if missing:
-        raise RuntimeError(f"Dataset archive is missing expected files: {sorted(missing)}")
-    if sum(info.file_size for info in archive.infolist()) > MAX_UNCOMPRESSED_BYTES:
+    members = [info for info in archive.infolist() if not info.is_dir()]
+    matching = [info for info in members if Path(info.filename).name == ARCHIVE_MEMBER]
+    if len(matching) != 1:
+        raise RuntimeError(f"Dataset archive must contain exactly one {ARCHIVE_MEMBER!r} file")
+    member = matching[0]
+    if member.file_size != EXPECTED_UNCOMPRESSED_BYTES:
+        raise RuntimeError("Dataset archive member size did not match the pinned source")
+    if member.file_size > MAX_UNCOMPRESSED_BYTES:
         raise RuntimeError("Dataset archive is unexpectedly large")
     output.mkdir(parents=True, exist_ok=True)
-    for info in archive.infolist():
-        filename = Path(info.filename).name
-        if filename not in EXPECTED_FILES:
-            continue
-        target = output / filename
-        with archive.open(info) as source, target.open("wb") as destination:
-            shutil.copyfileobj(source, destination)
+    target = output / OUTPUT_FILE
+    with archive.open(member) as source, target.open("wb") as destination:
+        shutil.copyfileobj(source, destination)
 
 
 def download(output: Path, url: str = DATASET_URL) -> None:
-    if all((output / filename).exists() for filename in EXPECTED_FILES):
+    target = output / OUTPUT_FILE
+    if target.exists() and target.stat().st_size == EXPECTED_UNCOMPRESSED_BYTES:
         print(f"Dataset already present in {output}")
         return
     with tempfile.NamedTemporaryFile(suffix=".zip") as temporary:
@@ -60,7 +60,7 @@ def download(output: Path, url: str = DATASET_URL) -> None:
         temporary.flush()
         with zipfile.ZipFile(temporary.name) as archive:
             safe_extract(archive, output)
-    print(f"Downloaded Recipe Box dataset to {output}")
+    print(f"Downloaded OMAI assignment dataset to {output / OUTPUT_FILE}")
 
 
 def main() -> None:

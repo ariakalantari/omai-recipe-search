@@ -189,7 +189,7 @@ def build_search_service(
         settings.recipe_data_path, max_recipes=settings.max_recipes
     )
     # A slice of a dataset is a different index artifact even when source bytes are identical.
-    fingerprint = f"{fingerprint}-{len(recipes)}"
+    fingerprint = f"{fingerprint}-{len(recipes)}-selection-v3"
     backend = embedding_backend
     if settings.semantic_enabled and backend is None:
         try:

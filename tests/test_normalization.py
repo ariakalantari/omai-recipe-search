@@ -26,6 +26,21 @@ def test_multilingual_food_aliases_are_canonicalized() -> None:
     assert {"cod", "coconut milk", "onion", "garlic", "tomato"}.issubset(terms)
 
 
+def test_query_bigrams_do_not_bridge_conjunctions() -> None:
+    terms = query_ingredients(["något starkt med torsk och kokosmjölk"])
+    assert terms == ("coconut milk", "cod")
+    assert "cod coconut" not in terms
+
+
+def test_query_bigrams_do_not_bridge_comma_separated_ingredients() -> None:
+    positive, _ = split_excluded_ingredients("I have eggs, potatoes and onion")
+    assert query_ingredients([positive]) == (
+        "egg",
+        "onion",
+        "potato",
+    )
+
+
 def test_discovery_intent_is_multilingual_and_bounded() -> None:
     assert query_intent("something I haven't had before") is QueryIntent.ADVENTUROUS
     assert query_intent("något annorlunda") is QueryIntent.ADVENTUROUS

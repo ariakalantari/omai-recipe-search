@@ -10,6 +10,10 @@ from recipe_search.domain import QueryIntent
 _NUMBER = re.compile(r"\b\d+(?:[./]\d+)?\b")
 _PUNCTUATION = re.compile(r"[^a-z0-9\s-]")
 _WHITESPACE = re.compile(r"\s+")
+_QUERY_INGREDIENT_SEPARATOR = re.compile(
+    r"[,;\n]+|\b(?:and|or|with|och|med|eller|y|con)\b",
+    flags=re.IGNORECASE,
+)
 
 _UNITS = {
     "cup",
@@ -321,11 +325,14 @@ def ingredient_terms(value: str, *, query: bool = False) -> frozenset[str]:
     ignored = _UNITS | _PREPARATION_WORDS
     if query:
         ignored |= _QUERY_STOPWORDS | _PREFERENCE_WORDS
-    words = [
-        _singularize(word) for word in normalized.split() if len(word) > 1 and word not in ignored
-    ]
+    raw_words = normalized.split()
+    words = [_singularize(word) for word in raw_words if len(word) > 1 and word not in ignored]
     terms = set(words)
-    terms.update(f"{left} {right}" for left, right in pairwise(words))
+    terms.update(
+        f"{_singularize(left)} {_singularize(right)}"
+        for left, right in pairwise(raw_words)
+        if len(left) > 1 and len(right) > 1 and left not in ignored and right not in ignored
+    )
     return frozenset(terms)
 
 
@@ -333,9 +340,13 @@ def query_ingredients(values: Iterable[str]) -> tuple[str, ...]:
     """Return stable, canonical ingredient terms from one or more inputs."""
     terms: set[str] = set()
     for value in values:
-        terms.update(ingredient_terms(value, query=True))
-    # Prefer informative phrases but keep unigrams for partial matching.
-    return tuple(sorted(terms, key=lambda item: (-item.count(" "), item)))
+        for segment in _QUERY_INGREDIENT_SEPARATOR.split(value):
+            terms.update(ingredient_terms(segment, query=True))
+    phrase_words = {word for term in terms if " " in term for word in term.split()}
+    # A phrase is one requested ingredient. Counting its component words again dilutes coverage,
+    # so keep standalone words only when they do not belong to an extracted phrase.
+    compact = {term for term in terms if " " in term or term not in phrase_words}
+    return tuple(sorted(compact, key=lambda item: (-item.count(" "), item)))
 
 
 def query_intent(value: str) -> QueryIntent:
@@ -351,7 +362,10 @@ def query_intent(value: str) -> QueryIntent:
 
 def split_excluded_ingredients(value: str) -> tuple[str, tuple[str, ...]]:
     """Split common English, Swedish, and Spanish exclusion phrases from a query."""
-    normalized = normalize_text(value)
+    # Keep list boundaries through normalization so adjacent comma-separated ingredients do not
+    # become an artificial phrase before deterministic parsing.
+    separated = re.sub(r"[,;\n]+", " queryseparator ", value)
+    normalized = normalize_text(separated)
     excluded_phrases: list[str] = []
 
     def remove_match(match: re.Match[str]) -> str:
@@ -369,6 +383,7 @@ def split_excluded_ingredients(value: str) -> tuple[str, tuple[str, ...]]:
         return " "
 
     positive = _SHORT_NEGATION_PATTERN.sub(remove_short_match, positive)
+    positive = re.sub(r"\bqueryseparator\b", ",", positive)
     return positive, query_ingredients(excluded_phrases)
 
 
