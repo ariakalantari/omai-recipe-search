@@ -1,50 +1,192 @@
 # OMAI Recipe Search
 
-An explainable multilingual recipe-search API built for the OMAI AI Developer take-home. It
-retrieves recipes from JSON using three complementary signals:
+An explainable multilingual recipe search system built for the OMAI AI Developer take-home.
+It accepts either a natural-language description or a list of ingredients, then ranks recipes
+using deterministic ingredient matching, lexical retrieval, and local multilingual embeddings.
 
-1. deterministic ingredient coverage;
-2. character-aware lexical TF-IDF;
-3. local multilingual semantic embeddings.
+## Live demo
 
-The API combines those signals with a small documented ranking function. Azure OpenAI can
-optionally turn fuzzy language into structured constraints, but it never chooses recipes and the
-application works without it.
+### [Try the deployed Recipe Search →](https://ariakalantari.github.io/omai-recipe-search/)
 
-[![CI](https://github.com/ariakalantari/omai-recipe-search/actions/workflows/ci.yml/badge.svg)](https://github.com/ariakalantari/omai-recipe-search/actions/workflows/ci.yml)
-[![Live demo](https://img.shields.io/badge/live_demo-open-171717?style=for-the-badge)](https://ariakalantari.github.io/omai-recipe-search/)
-[![Deploy to Render](https://render.com/images/deploy-to-render-button.svg)](https://render.com/deploy?repo=https://github.com/ariakalantari/omai-recipe-search)
+**No login, clone, build, API key, or local setup is required.**
 
-## Quick start
+- **Web application:** [ariakalantari.github.io/omai-recipe-search](https://ariakalantari.github.io/omai-recipe-search/)
+- **Interactive API documentation:** [recipe-search-production-aa6b.up.railway.app/docs](https://recipe-search-production-aa6b.up.railway.app/docs)
+- **Health status:** [recipe-search-production-aa6b.up.railway.app/healthz](https://recipe-search-production-aa6b.up.railway.app/healthz)
 
-### Hosted demo
+### Suggested searches
 
-Open **[the live GitHub Pages demo](https://ariakalantari.github.io/omai-recipe-search/)**. It
-requires no GitHub login, clone, build, or local dependencies. GitHub Pages serves the static
-interface and calls the same FastAPI application from its public Railway deployment. The API allows
-only the exact Pages origin through CORS. Optional Azure credentials remain backend-only.
+| Query | What it demonstrates |
+|---|---|
+| `något starkt med torsk och kokosmjölk` | Swedish meaning matched against English recipes |
+| `pasta con tomate y ajo` | Spanish multilingual retrieval |
+| `I have eggs, potatoes and onion` | Ingredient-oriented interpretation |
+| `something quick and spicy with chicken` | Fuzzy preference and time intent |
+| `vegetarian comfort food` | Broad semantic retrieval |
+| `something I haven't had before` | Honest, diversity-oriented discovery fallback |
 
-### Docker (recommended)
+## The problem and the design choice
 
-The image downloads the ODC-licensed public Recipe Box development dataset and precomputes the
-indexes during the build. Docker Compose uses a balanced 10k slice across all three source files so the first build fits a
-typical laptop. No key is required.
+A language model could be asked to choose recipes directly, but that would make the core behavior
+harder to reproduce, evaluate, explain, and trust. This application behaves as an information
+retrieval system instead:
+
+1. software handles exact constraints such as ingredients and limits;
+2. embeddings handle fuzzy language and cross-language meaning;
+3. a transparent ranker combines the retrieval signals;
+4. an optional LLM may structure a difficult query, but never selects or invents a recipe.
+
+The result is useful without any hosted AI provider and degrades safely if semantic inference is
+unavailable.
+
+## Architecture
+
+```mermaid
+flowchart LR
+    C[Browser or API client] --> F[FastAPI]
+    F --> Q[Query understanding]
+    Q --> H[Local heuristic parser]
+    Q -. optional structured extraction .-> A[Azure OpenAI]
+    H --> R[Candidate retrieval]
+    A --> R
+    D[Recipe JSON] --> I[Validated cached indexes]
+    I --> R
+    R --> G[Explainable hybrid ranker]
+    G --> V[Discovery diversity when requested]
+    V --> F
+```
+
+One FastAPI process owns an immutable recipe collection and three read-only indexes. Search work
+runs outside the async event loop. Optional provider calls are time-bounded and fall back to local
+query understanding before retrieval continues.
+
+### Request flow
+
+```text
+input validation
+    → query normalization
+    → ingredient and preference interpretation
+    → lexical, semantic, and ingredient retrieval
+    → weighted hybrid ranking
+    → confidence and match explanation
+    → paginated JSON or UI results
+```
+
+## Search and ranking
+
+Each retrieval signal solves a different failure mode.
+
+| Signal | Technique | Why it exists |
+|---|---|---|
+| Ingredient | Normalized term coverage and overlap | Exact ingredients should behave deterministically |
+| Lexical | Character 3–4 gram TF-IDF with cosine similarity | Exact wording, partial terms, and misspellings still matter |
+| Semantic | Multilingual MiniLM embeddings with cosine similarity | Meaning must transfer across fuzzy English, Swedish, and Spanish input |
+
+All components are normalized to `[0, 1]` before combination.
+
+| Query type | Semantic | Lexical | Ingredient |
+|---|---:|---:|---:|
+| Natural language | 0.55 | 0.25 | 0.20 |
+| Explicit ingredients | 0.30 | 0.15 | 0.55 |
+
+Natural-language queries emphasize meaning. Explicit ingredient lists emphasize coverage. These
+weights are intentionally understandable defaults, not claimed to be learned or universally
+optimal.
+
+Ingredient relevance is `0.8 × query coverage + 0.2 × cosine-like term overlap`. Coverage dominates
+so omitting a requested ingredient is expensive. The smaller overlap term favors focused recipes.
+If semantic search fails, its weight is redistributed across ingredient and lexical retrieval.
+
+Broad novelty requests use a separate, clearly labeled discovery strategy. Corpus-relative
+distinctiveness favors less common ingredient combinations, while a small diversity reranker
+reduces repeated titles and near-identical ingredient sets. The application never claims to know
+the user's personal cooking history.
+
+## How AI is used
+
+The primary AI technique is local representation learning. A pretrained multilingual encoder maps
+queries and recipe text into the same vector space. This provides cross-language and fuzzy semantic
+matching without sending recipe searches to a third party.
+
+Azure OpenAI support is optional and isolated behind the query-understanding interface. When
+configured, it performs one narrow task: extracting ingredients, exclusions, preferences, and a
+time constraint into validated JSON. It uses low reasoning effort because this is structured
+extraction, not open-ended reasoning.
+
+The LLM does not:
+
+- choose the winning recipes;
+- generate recipes or missing instructions;
+- produce card descriptions;
+- replace deterministic ingredient rules;
+- become a requirement for availability.
+
+This boundary keeps retrieval grounded, reproducible, inexpensive, and defensible in a technical
+review.
+
+## API
+
+`POST /api/search` accepts exactly one input form.
+
+Natural language:
+
+```json
+{
+  "query": "något starkt med torsk och kokosmjölk",
+  "limit": 10,
+  "mode": "hybrid",
+  "ai": "auto"
+}
+```
+
+Ingredients:
+
+```json
+{
+  "ingredients": ["eggs", "potatoes", "onion"],
+  "limit": 10
+}
+```
+
+`mode` is `lexical`, `semantic`, or `hybrid`. `ai` is `auto` or `off`. Unknown fields are
+rejected, input length is bounded, and `limit` must be between 1 and 50.
+
+Every result contains the recipe, normalized component scores, matched ingredients, and a
+human-readable match explanation. The UI converts these details into labels such as `Best match`,
+`Closest available`, and `Adventurous pick` instead of exposing raw decimals to users.
+
+```bash
+curl -s https://recipe-search-production-aa6b.up.railway.app/api/search \
+  -H 'content-type: application/json' \
+  -d '{"ingredients":["eggs","potatoes","onion"],"limit":3}'
+```
+
+Operational endpoints are `GET /healthz` and `GET /readyz`.
+
+## Run locally
+
+### Docker
+
+Docker is the recommended local path. No API key is required.
 
 ```bash
 docker compose up --build
 ```
 
-Open http://localhost:8000 for the demo or http://localhost:8000/docs for OpenAPI.
+Open [localhost:8000](http://localhost:8000) for the application or
+[localhost:8000/docs](http://localhost:8000/docs) for OpenAPI.
 
-After the GitHub container workflow completes, reviewers can avoid cloning and building. The
-published review image contains the same prebuilt balanced 10k slice:
+Docker Compose binds only to `127.0.0.1:8000`. The build downloads the ODC-licensed Recipe Box
+development dataset and precomputes a balanced 10,000-recipe index.
+
+The published review image contains the same prebuilt index:
 
 ```bash
 docker run --rm --platform linux/amd64 -p 127.0.0.1:8000:8000 \
   ghcr.io/ariakalantari/omai-recipe-search:latest
 ```
 
-### Local Python
+### Python
 
 Requires Python 3.11–3.13 and [uv](https://docs.astral.sh/uv/).
 
@@ -56,137 +198,13 @@ make index
 make dev
 ```
 
-For a fast smoke test, skip the data download and set
-`RECIPE_DATA_PATH=data/sample_recipes.json`.
+For a fast smoke test, set `RECIPE_DATA_PATH=data/sample_recipes.json` and skip `make data` and
+`make index`.
 
-## API
+## Secrets and optional Azure configuration
 
-`POST /api/search` accepts exactly one input form:
-
-```json
-{
-  "query": "något starkt med torsk och kokosmjölk",
-  "limit": 10,
-  "mode": "hybrid",
-  "ai": "auto"
-}
-```
-
-or:
-
-```json
-{
-  "ingredients": ["eggs", "potatoes", "onion"],
-  "limit": 10
-}
-```
-
-`mode` is `lexical`, `semantic`, or `hybrid`. `ai` is `auto` or `off`. Every result includes the
-three retrieval scores, the discovery distinctiveness score, matched normalized ingredients, and a human-readable reason. Limits are
-bounded to 1–50 and unknown request fields are rejected.
-
-```bash
-curl -s http://localhost:8000/api/search \
-  -H 'content-type: application/json' \
-  -d '{"ingredients":["eggs","potatoes","onion"],"limit":3}'
-```
-
-Operational endpoints are `GET /healthz` and `GET /readyz`.
-
-## Demo UI
-
-The bundled frontend is deliberately small and presentation-focused. The in-app **How it works**
-guide explains the architecture without exposing credentials or private configuration. A search retrieves the top
-50 ranked recipes once, then shows ten per page so paging is instant and the ranking snapshot stays
-stable. Cards use confidence-aware labels such as `Best match`, `Closest available`, and
-`Adventurous pick` instead of exposing raw score decimals. The underlying component scores remain in the API response
-for debugging, evaluation, and technical review.
-
-The raw corpus has instructions but no editorial descriptions. Cards therefore use short,
-deterministic summaries built only from each recipe title and cleaned signature ingredients. They
-never display the first method step as a description or ask an LLM to invent missing facts.
-
-Selecting a card opens a focused recipe detail dialog with the grounded summary, timing, yield,
-ingredients, method, and source link when those fields exist in the dataset. Missing fields are
-stated plainly; the interface does not invent recipe history or instructions.
-
-## Architecture
-
-```mermaid
-flowchart LR
-    C[Browser or API client] --> F[FastAPI]
-    F --> Q[Query understanding]
-    Q --> H[Heuristic parser]
-    Q -. optional structured extraction .-> A[Azure GPT-5.6 Luna]
-    H --> R[Local retrieval]
-    A --> R
-    D[Recipe JSON] --> I[Cached indexes]
-    I --> R
-    R --> G[Explainable hybrid ranker]
-    G --> V[Discovery diversity when requested]
-    V --> F
-```
-
-One process owns one immutable recipe collection and three read-only indexes. Startup validates
-records and loads or builds the derived indexes. Search is synchronous CPU work moved off the event
-loop; the provider call, when enabled, is bounded and falls back before retrieval.
-
-Important code surfaces:
-
-- `loader.py`: tolerant JSON ingestion, cleanup, stable IDs, and data-quality reporting;
-- `normalization.py`: units, quantities, aliases, and deterministic ingredient terms;
-- `search.py`: all three indexes, score calculation, discovery scoring, and ranking weights;
-- `query_understanding.py`: heuristic interpretation and the isolated Azure adapter;
-- `service.py`: orchestration, AI rate limiting, fallback metadata, and response assembly;
-- `summaries.py`: factual card summaries from titles and ingredients;
-- `main.py`: FastAPI contract and static frontend hosting.
-
-## Ranking
-
-All components are normalized to `[0, 1]` before combination.
-
-| Query type | Semantic | Lexical | Ingredient | Reason |
-|---|---:|---:|---:|---|
-| Natural language | 0.55 | 0.25 | 0.20 | Meaning carries most information; exact words still anchor it |
-| Explicit ingredients | 0.30 | 0.15 | 0.55 | Ingredient coverage is the user's strongest constraint |
-
-If the semantic model is unavailable, its weight is redistributed across the two local signals.
-`semantic` mode also falls back to lexical search instead of failing the endpoint. These defaults
-are intentionally simple starting points, not learned relevance parameters.
-
-Ingredient score is `0.8 × query coverage + 0.2 × cosine-like term overlap`. Coverage dominates so
-a recipe is penalized for omitting a requested ingredient; the smaller overlap term mildly favors
-focused recipes. Character 3–4 gram TF-IDF helps misspellings. Cosine similarity over normalized
-multilingual MiniLM vectors bridges Swedish/Spanish queries to English recipe text.
-
-For broad novelty requests such as `surprise me`, the app switches to a clearly labeled discovery
-strategy. A corpus-relative distinctiveness score favors less common ingredient combinations, then
-a small diversity reranker reduces repeated titles, categories, and ingredient sets. This is not a
-claim about the user's history. Unrecognized low-signal text receives the same varied fallback with
-an honest refinement hint.
-
-## How AI is used and why it is narrow
-
-The primary AI technique is local representation learning: a pretrained multilingual encoder maps
-queries and recipe text into the same vector space. This is the right tool for fuzzy cross-language
-meaning.
-
-Optional Azure GPT-5.6 Luna performs one bounded task: extract mentioned ingredients, exclusions,
-preferences, and a time constraint from constraint-heavy wording into strict JSON. Simple natural
-language stays local. It uses low reasoning effort because entity
-extraction is not a hard reasoning problem. The ranker remains deterministic and all returned facts
-come from the dataset.
-
-This is preferable to asking an LLM to pick recipes because retrieval is cheaper, reproducible,
-grounded, testable, and explainable. A provider outage only changes `query_understanding.source` to
-`heuristic`; search remains available.
-
-## Azure configuration without leaked secrets
-
-Never put the key in JavaScript, Docker build arguments, the Dockerfile, Git, or `.env.example`.
-The browser calls this backend; only the backend can call Azure.
-
-For local development or Render, add these values to the host's runtime secret store:
+Secrets are runtime configuration. They are never placed in JavaScript, Git, Docker build
+arguments, the Dockerfile, or `.env.example`.
 
 ```dotenv
 AZURE_OPENAI_BASE_URL=https://YOUR-RESOURCE.openai.azure.com/openai/v1/
@@ -194,37 +212,98 @@ AZURE_OPENAI_DEPLOYMENT=gpt-5.6-luna
 AZURE_OPENAI_API_KEY=...
 ```
 
-For Azure Container Apps, prefer no API key:
+The browser calls FastAPI, and only FastAPI may call Azure. The public demo does not require Azure
+and currently reports `ai_available: false` through `/healthz`.
 
-1. enable a system-assigned managed identity on the Container App;
-2. grant it `Cognitive Services OpenAI User` on the Azure OpenAI resource;
-3. set the base URL/deployment and `AZURE_OPENAI_USE_ENTRA=true`;
+For Azure Container Apps, the preferred production setup is a system-assigned managed identity:
+
+1. grant the identity `Cognitive Services OpenAI User` on the Azure OpenAI resource;
+2. set the endpoint and deployment as ordinary runtime configuration;
+3. set `AZURE_OPENAI_USE_ENTRA=true`;
 4. leave `AZURE_OPENAI_API_KEY` unset.
 
-`DefaultAzureCredential` supplies a refreshable runtime token provider. GitHub Actions deployments should
-use Azure OIDC federation rather than a long-lived service-principal secret. For a public demo,
-in-process AI limits and Azure quota bound indirect key abuse; production would put a distributed
-gateway quota in front of the service.
+GitHub Actions should use Azure OIDC federation rather than a long-lived service-principal secret.
 
 ## Evaluation
 
-The evaluation set covers Swedish, English, Spanish, explicit ingredient lists, fuzzy requests,
-misspellings, and an impossible request. It runs the production path in all three modes and reports
-top results, Hit@5, and mean reciprocal rank.
+The evaluation harness compares lexical-only, semantic-only, and hybrid retrieval over English,
+Swedish, Spanish, ingredient-list, fuzzy, misspelled, and impossible queries.
 
 ```bash
 make evaluate
-# or
-uv run recipe-evaluate --data data/recipes --output evaluation/results/latest.md
 ```
 
-The labels are intentionally small and human-readable. A case is excluded from aggregate metrics
-when the evaluated corpus slice contains no recipe satisfying its label; this avoids blaming the
-ranker for missing data. They establish whether hybrid search helps, not a statistically meaningful
-benchmark. On the verified balanced 10k slice, hybrid reached Hit@5 of 100% and MRR 0.950,
-compared with semantic at 80% and 0.700 and lexical at 90% and 0.750. The evaluation records zero
-exclusion violations and demonstrates both adventurous and low-signal discovery behavior.
-See `evaluation/queries.json` and `evaluation/results/representative-10k.md`.
+Verified balanced 10,000-recipe results:
+
+| Mode | Hit@5 | Mean reciprocal rank |
+|---|---:|---:|
+| Lexical | 90% | 0.750 |
+| Semantic | 80% | 0.700 |
+| Hybrid | **100%** | **0.950** |
+
+This is a small architectural sanity check, not a research benchmark. Cases with no satisfying
+recipe in the evaluated corpus are excluded from aggregate metrics. The report also checks hard
+exclusions and the low-signal discovery behavior.
+
+See [`evaluation/queries.json`](evaluation/queries.json) and the
+[`representative 10k report`](evaluation/results/representative-10k.md).
+
+## Robustness and security
+
+- Empty, conflicting, oversized, and malformed requests fail with compact responses.
+- Bodies above 16 KiB are rejected before JSON parsing and are never reflected back.
+- Corrupt recipe records are skipped and reported; a wholly unusable dataset fails startup.
+- Cached row counts and numeric values are validated; corrupt or incompatible indexes rebuild.
+- Semantic inference failure degrades to lexical and ingredient search.
+- Azure timeouts, authentication failures, quota errors, invalid JSON, and schema errors fall back
+  to local query understanding.
+- Search concurrency is bounded, and optional paid AI calls have global and per-client rate limits.
+- Exact canonical exclusions are removed from results, but the API does not claim allergy safety.
+- Search text and credentials are not logged.
+- Security headers restrict framing, MIME sniffing, browser capabilities, and content sources.
+- The hosted API permits browser cross-origin access only from the exact GitHub Pages origin.
+- Failed repeat searches preserve the user's previous results.
+- The service exposes separate liveness and readiness endpoints.
+
+## Deployment
+
+### [Open the live application →](https://ariakalantari.github.io/omai-recipe-search/)
+
+The reviewer-facing frontend is deployed automatically to GitHub Pages. GitHub Pages serves only
+static HTML, CSS, and JavaScript, so the Dockerized Python API runs as a small Railway service.
+
+```mermaid
+flowchart LR
+    U[Reviewer] --> P[GitHub Pages frontend]
+    P -->|HTTPS JSON| R[Railway FastAPI service]
+    R --> I[10k local search index]
+    R -. optional, currently off .-> A[Azure OpenAI]
+```
+
+The frontend contains only the public API origin, which is not a secret. Railway stores runtime
+configuration, performs health checks, and sleeps the demo service while inactive to reduce cost.
+The public deployment uses the same image and retrieval path tested locally.
+
+The current 10k service uses about 945 MB of memory. The 10k Docker profile is an operational demo
+choice, not a search-engine limit. A larger deployment would build versioned indexes once, store
+them in object storage, and load them read-only at startup.
+
+## Code map
+
+```text
+src/recipe_search/
+  main.py                 FastAPI contract, middleware, health, static UI
+  loader.py               tolerant JSON ingestion and data-quality reporting
+  normalization.py        quantities, units, aliases, and ingredient terms
+  query_understanding.py  local heuristics and isolated Azure adapter
+  search.py               indexes, scoring, ranking, and discovery diversity
+  service.py              orchestration, fallbacks, limits, response assembly
+  summaries.py            factual card summaries from titles and ingredients
+  static/                 dependency-free browser interface
+evaluation/               query set and comparison harness
+scripts/                  dataset download and offline index build
+tests/                    unit, retrieval, resilience, and API tests
+```
 
 ## Tests and code quality
 
@@ -233,81 +312,27 @@ make test
 make lint
 ```
 
-Tests cover normalization, multilingual aliases, malformed records, ingredient ranking, retrieval
-modes, API validation, provider fallback, and AI rate limiting. CI repeats linting and tests on every
-push and pull request; a separate workflow publishes the Docker image to GHCR.
+The suite covers normalization, multilingual aliases, malformed data, scoring, ranking modes,
+exclusions, API validation, CORS, provider fallback, AI limits, static assets, and UI behavior.
+Ruff, mypy, and pytest run in automation. Dependency and security checks are part of submission
+review.
 
-## Robustness and failure behavior
+## Trade-offs and next steps
 
-- corrupt records are skipped and counted; a wholly unusable dataset fails startup clearly;
-- cache row counts and numeric values are validated; corrupt caches are rebuilt;
-- cache paths include an explicit index schema version so ranking or loader changes cannot silently
-  reuse incompatible matrices;
-- semantic download or query inference failure degrades to lexical plus ingredient search;
-- Azure timeout, quota, dependency, authentication, schema, or JSON errors use heuristics;
-- empty or malformed validated fields receive compact FastAPI `422` responses;
-- raw API bodies above 16 KiB receive a compact `413` before JSON parsing, and validation errors do
-  not echo the user's full input;
-- local search concurrency is bounded, while optional AI calls also have a separate cost fuse;
-- exact canonical exclusions are removed from returned results, with a clear warning that this is
-  not allergy certification;
-- capped directory loading rotates across source files instead of filling the demo from one file;
-- duplicate normalized titles are suppressed in each result set;
-- low-score results are labeled low-confidence rather than presented as certain;
-- request text and credentials are not logged;
-- the main UI sets a restrictive content policy, framing protection, MIME protection, and no-store
-  caching for search responses.
-
-## Deployment choices
-
-- **Hosted review:** GitHub Pages serves the UI at the repository's `github.io` URL. A Railway
-  service runs the Dockerized API and can sleep while inactive to control demo costs.
-- **Fast review:** public GHCR image, one `docker run` command.
-- **Alternative:** the Render button uses a 2 GB service and indexes 10k recipes. This is intentionally
-  not labeled free: the measured 10k steady-state process uses about 945 MB. Add Azure secrets in
-  Render's dashboard only if the optional interpreter is wanted.
-- **Recommended Azure production path:** Container Apps + managed identity + an Azure OpenAI role.
-
-The service is stateless after startup. Multiple replicas can share an immutable prebuilt image. At
-larger scale, store versioned index artifacts in blob storage, load them read-only, and replace the
-NumPy scan with FAISS or a managed vector/search service only after latency measurements justify it.
-
-GitHub Pages cannot execute Python, so it owns only the static presentation layer. The Railway
-service owns request validation, query understanding, all retrieval indexes, ranking, and optional
-AI access. The public API URL is not a secret; provider keys remain runtime-only server variables.
-
-The 10k Docker default is an operational demo profile, not a search-engine limitation. Local Python
-uses all records when `MAX_RECIPES` is unset. To produce a larger Docker artifact, set the build arg
-and keep the same runtime value, for example `--build-arg MAX_RECIPES=50000` and
-`-e MAX_RECIPES=50000`.
-
-## Trade-offs, limitations, and next steps
-
-- Ingredient parsing is deliberately approximate. It removes common quantities/units and creates
-  unigrams/bigrams; it is not a culinary ontology or full quantity parser.
-- The public Recipe Box surrogate contains useful methods but no editorial descriptions in the
-  inspected corpus. Deterministic display summaries are factual but less fluent than human-written
-  recipe introductions.
-- A small alias list helps deterministic Swedish/Spanish ingredient matching. Semantic search is
-  the general multilingual mechanism; the alias list should grow from observed evaluation failures.
-- Static weights are transparent but not optimal. With click/judgment data, learn or tune them on a
-  held-out set.
-- “Vegetarian” is a fuzzy semantic preference, not a guaranteed dietary safety filter. Production
-  dietary/allergen filtering needs curated metadata and hard exclusions.
-- Index building is intentionally offline and local. Dataset updates require a rebuild rather than
-  incremental ingestion.
-- The measured 10k Docker index build took about 7.5 minutes on an Apple laptop with one worker;
-  loading its cached artifacts took about 8 seconds and peaked around 945 MB RSS. The full
-  corpus should be built once in CI and shipped as an artifact; 3 GB is the conservative minimum
-  memory recommendation for full-corpus serving.
-- The in-memory AI limiter is a demo safeguard, not cross-replica abuse prevention.
-- Distinctiveness is relative to this recipe collection. It is not personalization and can still
-  overvalue a rare brand or noisy ingredient token despite frequency caps and filtering.
-- The Azure adapter has contract/fallback tests but was not live-tested against the private Friskly
-  deployment because its endpoint, deployment name, identity/role, and secret were not supplied.
-  Those values belong in the runtime environment, never in this repository.
+- Ingredient parsing removes common quantities and units, but it is not a culinary ontology.
+- Vegetarian and similar preferences are ranking signals, not certified dietary filters.
+- Static ranking weights are explainable but should eventually be tuned on relevance judgments.
+- Deterministic card summaries stay factual but are less fluent than editorial descriptions.
+- The alias list improves common Swedish and Spanish ingredients; observed failures should drive
+  its growth.
+- Index updates are offline rebuilds rather than incremental ingestion.
+- The in-process rate limiter is appropriate for one demo replica, not a distributed fleet.
+- The full corpus would benefit from versioned object-storage artifacts and measured FAISS or
+  managed-vector retrieval only after a linear NumPy scan stops meeting latency targets.
+- The optional Azure adapter has contract and fallback tests but was not live-tested against a
+  private deployment because no endpoint, identity, role, or secret was supplied.
 
 Intentionally not built: recipe generation, authentication, user histories, agents, a vector
 database, microservices, Kubernetes, or a large frontend.
 
-Detailed source-backed research is in `docs/research.md`.
+Detailed source-backed technical research is in [`docs/research.md`](docs/research.md).
