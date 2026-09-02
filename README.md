@@ -28,10 +28,11 @@ records that can be matched strictly to an instruction-bearing record from Recip
 | `vegetarian comfort food` | Broad semantic retrieval |
 | `something I haven't had before` | Honest, diversity-oriented discovery fallback |
 
-Recipe cards show compact timing, yield, and ingredient facts when the source data supports them.
-The detail view keeps the source-backed ingredient and method text intact, attributes the publisher,
-and visually separates measurements, cooking times, and temperatures. The formatting is
-deterministic, escaped at the rendering boundary, and does not use an LLM to rewrite recipe content.
+Recipe cards show compact icon-based timing, yield, and ingredient facts when the source data
+supports them. The detail view gives each fact a clear label, keeps the source-backed ingredient and
+method text intact, and links to the publisher with a locally served favicon. No publisher request is
+made merely by viewing a recipe. Measurements, cooking times, and temperatures are formatted
+deterministically at the escaped rendering boundary. An LLM never rewrites recipe content.
 
 ## The problem and the design choice
 
@@ -170,6 +171,12 @@ Every result contains the recipe, method provenance, normalized component scores
 ingredients, and a human-readable match explanation. The UI converts these details into labels
 such as `Best match`, `Closest available`, and `Adventurous pick` instead of exposing raw decimals
 to users.
+
+`prep_time` and `cook_time` preserve the source ISO 8601 durations. `total_minutes` is returned only
+when both durations are present and valid, so the API never presents a partial value as a total.
+Publisher, URL, description, yield, and method fields are nullable because the upstream records are
+not uniform. Their precise definitions and multilingual request examples are available in the
+interactive OpenAPI documentation.
 
 ```bash
 curl -s https://recipe-search-production-aa6b.up.railway.app/api/search \

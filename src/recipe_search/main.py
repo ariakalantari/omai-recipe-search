@@ -19,6 +19,18 @@ from recipe_search.schemas import HealthResponse, SearchRequest, SearchResponse
 from recipe_search.service import SearchCapacityError, SearchService, build_search_service
 
 _JSON_CONTENT_TYPE: Final = "application/json"
+_OPENAPI_TAGS: Final = [
+    {
+        "name": "search",
+        "description": (
+            "Retrieve and rank recipes using ingredient, lexical, and multilingual semantic signals."
+        ),
+    },
+    {
+        "name": "operations",
+        "description": "Inspect application health and retrieval capability availability.",
+    },
+]
 
 
 class RequestTooLargeError(Exception):
@@ -97,8 +109,10 @@ def create_app(
         version="0.1.0",
         description=(
             "Explainable multilingual recipe retrieval using deterministic ingredient matching, "
-            "lexical TF-IDF, and local semantic embeddings."
+            "lexical TF-IDF, and local semantic embeddings. Optional Azure AI only interprets "
+            "complex query constraints. The local ranker always selects the recipes."
         ),
+        openapi_tags=_OPENAPI_TAGS,
         lifespan=lifespan,
     )
     app.add_middleware(
@@ -158,7 +172,17 @@ def create_app(
             response.headers["Cache-Control"] = "no-store"
         return response
 
-    @app.get("/healthz", response_model=HealthResponse, tags=["operations"])
+    @app.get(
+        "/healthz",
+        response_model=HealthResponse,
+        tags=["operations"],
+        summary="Inspect search service health",
+        description=(
+            "Reports recipe coverage and whether semantic retrieval and optional Azure query "
+            "interpretation are available. A degraded service can still provide lexical and "
+            "ingredient search."
+        ),
+    )
     async def health(request: Request) -> HealthResponse:
         current: SearchService = request.app.state.search_service
         degraded = not current.index.semantic_available or bool(current.load_report.warnings)
@@ -179,7 +203,21 @@ def create_app(
     async def ready() -> dict[str, str]:
         return {"status": "ready"}
 
-    @app.post("/api/search", response_model=SearchResponse, tags=["search"])
+    @app.post(
+        "/api/search",
+        response_model=SearchResponse,
+        tags=["search"],
+        summary="Search the recipe collection",
+        description=(
+            "Submit exactly one natural-language query or ingredient list. Hybrid mode combines "
+            "deterministic ingredient coverage, character TF-IDF, and multilingual embeddings. "
+            "Scores and interpreted constraints are returned for review."
+        ),
+        responses={
+            413: {"description": "Request body exceeds the configured size limit."},
+            503: {"description": "The bounded search worker pool is currently full."},
+        },
+    )
     async def search(payload: SearchRequest, request: Request) -> SearchResponse:
         current: SearchService = request.app.state.search_service
         client_id = request.client.host if request.client else "unknown"

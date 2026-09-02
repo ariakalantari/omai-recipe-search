@@ -7,7 +7,7 @@
     <meta http-equiv="Content-Security-Policy" content="default-src 'self'; base-uri 'none'; object-src 'none'; form-action 'self'; img-src 'self' data:; style-src 'self'; script-src 'self'; connect-src 'self' https://recipe-search-production-aa6b.up.railway.app" />
     <title>Recipe Search</title>
     <link rel="icon" href="favicon.svg?v=2" type="image/svg+xml" />
-    <link rel="stylesheet" href="styles.css?v=6" />
+    <link rel="stylesheet" href="styles.css?v=7" />
   </head>
   <body>
     <div class="top-actions">
@@ -95,13 +95,18 @@
           </section>
 
           <section class="how-section">
-            <h3>Four clear ranking signals</h3>
+            <h3>Three retrieval signals, one final ranker</h3>
             <ol class="how-steps">
               <li><span>1</span><div><strong>Ingredient overlap</strong><p>Canonical ingredient terms reward recipes that cover what you listed.</p></div></li>
               <li><span>2</span><div><strong>Lexical similarity</strong><p>Character-based TF-IDF catches exact wording and many misspellings.</p></div></li>
               <li><span>3</span><div><strong>Semantic similarity</strong><p>Local multilingual embeddings connect fuzzy meaning across languages.</p></div></li>
-              <li><span>4</span><div><strong>Hybrid ranking</strong><p>A small weighted formula combines the signals and keeps every score inspectable through the API.</p></div></li>
+              <li><span>4</span><div><strong>Hybrid ranking</strong><p>A small weighted formula combines those three signals. Natural-language searches emphasize meaning, while ingredient lists emphasize coverage. Every component remains inspectable through the API.</p></div></li>
             </ol>
+          </section>
+
+          <section class="how-section">
+            <h3>How to read a result</h3>
+            <p>Cards use compact icons for the best available time, source yield, and ingredient count. The clock prefers a verified total time, then falls back to cook or prep time. Open a card for clearly labeled prep, cook, total, and yield facts, followed by the source-backed ingredients and method.</p>
           </section>
 
           <section class="how-section">
@@ -122,6 +127,7 @@
               <li>Cards use the source description when it exists. A factual title-and-ingredient summary is used when it does not.</li>
               <li>Timing, yield, and publisher attribution come from the recipe record. A total time is shown only when both prep and cook time are known.</li>
               <li>The supplied collection rarely includes method steps. The deployed profile adds them only after an exact title and strict ingredient match against an instruction-bearing corpus. The app does not invent missing methods.</li>
+              <li>Publisher marks are bundled with this site for attribution. No publisher is contacted until you choose to open its source link.</li>
               <li>Ingredient exclusions improve ranking but are not an allergy or dietary safety guarantee.</li>
             </ul>
           </section>
@@ -131,6 +137,6 @@
       </div>
     </dialog>
 
-    <script type="module" src="app.js?v=6"></script>
+    <script type="module" src="app.js?v=7"></script>
   </body>
 </html>

@@ -1,10 +1,29 @@
-import { formatIngredientText, formatInstructionText } from "./recipe-format.mjs?v=1";
+import {
+  formatIngredientText,
+  formatInstructionText,
+  instructionSteps,
+} from "./recipe-format.mjs?v=2";
 import {
   formatDuration,
   formatMinutes,
-  recipeFacts,
+  recipeFactItems,
+  sourceIconPath,
   sourceLabel,
-} from "./recipe-metadata.mjs?v=1";
+} from "./recipe-metadata.mjs?v=2";
+
+const ICON_PATHS = {
+  clock: '<circle cx="12" cy="12" r="8.5"/><path d="M12 7.5v5l3.2 1.9"/>',
+  flame: '<path d="M12.2 21c3.7 0 6.3-2.8 6.3-6.6 0-3.2-1.8-6.2-5.4-9.5.2 3.1-1.4 4.2-2.8 5.7-1 1-1.5 2.1-1.4 3.4.1 1.3.7 2.3 1.7 3-.1-2.1 1.2-3.6 2.7-5.1.2 2 2.1 3.3 2.1 5.2 0 2.2-1.5 3.9-3.2 3.9Z"/>',
+  hourglass: '<path d="M7 3h10M7 21h10M8 3c0 4.2 1.2 6.3 4 9-2.8 2.7-4 4.8-4 9M16 3c0 4.2-1.2 6.3-4 9 2.8 2.7 4 4.8 4 9"/>',
+  users: '<path d="M16 20v-1.6c0-2.2-1.8-4-4-4H7.5c-2.2 0-4 1.8-4 4V20"/><circle cx="9.8" cy="7.8" r="3.2"/><path d="M16 14.8c2.5.2 4.5 1.4 4.5 3.6V20M15.7 4.8a3.2 3.2 0 0 1 0 6.1"/>',
+  ingredients: '<path d="M8.5 5.5h11M8.5 12h11M8.5 18.5h11"/><path d="m3.7 5.5.9.9 1.7-1.8M3.7 12l.9.9 1.7-1.8M3.7 18.5l.9.9 1.7-1.8"/>',
+  globe: '<circle cx="12" cy="12" r="8.5"/><path d="M3.8 12h16.4M12 3.5c2.2 2.3 3.3 5.1 3.3 8.5s-1.1 6.2-3.3 8.5c-2.2-2.3-3.3-5.1-3.3-8.5S9.8 5.8 12 3.5Z"/>',
+  external: '<path d="M7 17 17 7M8 7h9v9"/>',
+};
+
+const iconMarkup = (name, className = "") => (
+  `<svg class="${className}" viewBox="0 0 24 24" aria-hidden="true">${ICON_PATHS[name]}</svg>`
+);
 
 const form = document.querySelector("#search-form");
 const input = document.querySelector("#search-input");
@@ -64,6 +83,12 @@ const recipeOverview = (recipe) => {
   return "Open the recipe to explore its ingredients and available details.";
 };
 
+const recipeFactsMarkup = (recipe) => recipeFactItems(recipe).map((fact) => `
+  <span class="recipe-fact" title="${escapeHtml(fact.label)}" aria-label="${escapeHtml(fact.label)}">
+    ${iconMarkup(fact.kind === "time" ? "clock" : fact.kind === "yield" ? "users" : "ingredients")}
+    <span aria-hidden="true">${escapeHtml(fact.value)}</span>
+  </span>`).join("");
+
 document.querySelectorAll(".mode-button").forEach((button) => {
   button.addEventListener("click", () => {
     document.querySelectorAll(".mode-button").forEach((item) => item.classList.remove("active"));
@@ -98,7 +123,7 @@ const renderRecipe = (recipe, index) => {
       </span>
       <span class="recipe-overview">${escapeHtml(recipeOverview(recipe))}</span>
       <span class="card-bottom">
-        <span class="recipe-facts">${escapeHtml(recipeFacts(recipe))}</span>
+        <span class="recipe-facts">${recipeFactsMarkup(recipe)}</span>
         <span class="view-label">View recipe <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m9 18 6-6-6-6" /></svg></span>
       </span>
     </button>`;
@@ -152,18 +177,22 @@ pagination.addEventListener("click", (event) => {
 
 const metadataMarkup = (recipe) => {
   const items = [
-    ["Prep", formatDuration(recipe.prep_time)],
-    ["Cook", formatDuration(recipe.cook_time)],
-    ["Total", formatMinutes(recipe.total_minutes)],
-    ["Makes", recipe.recipe_yield],
+    ["prep", formatDuration(recipe.prep_time), "clock"],
+    ["cook", formatDuration(recipe.cook_time), "flame"],
+    ["total", formatMinutes(recipe.total_minutes), "hourglass"],
+    [null, recipe.recipe_yield, "users"],
   ].filter(([, value]) => value);
   if (!items.length) return "";
-  return `<div class="detail-meta">${items.map(([label, value]) => `<span><strong>${label}:</strong> ${escapeHtml(value)}</span>`).join("")}</div>`;
+  return `<div class="detail-meta" aria-label="Recipe facts">${items.map(([label, value, icon]) => `
+    <div class="detail-metric">
+      <span class="metric-icon">${iconMarkup(icon)}</span>
+      <span class="metric-copy"><strong>${escapeHtml(value)}</strong>${label ? `<span>${label}</span>` : ""}</span>
+    </div>`).join("")}</div>`;
 };
 
 const methodSectionMarkup = (recipe) => {
   if (!recipe.instructions) return "";
-  const steps = recipe.instructions.split(/\n+/).map((step) => step.trim()).filter(Boolean);
+  const steps = instructionSteps(recipe.instructions);
   if (!steps.length) return "";
   const provenance = recipe.instruction_source === "matched_corpus"
     ? '<p class="method-provenance">Recovered from a high-confidence title and ingredient match in the instruction corpus.</p>'
@@ -178,14 +207,20 @@ const methodSectionMarkup = (recipe) => {
 
 const sourceMarkup = (recipe) => {
   const label = sourceLabel(recipe.source);
-  if (!label && !recipe.url) return "";
-  const attribution = label
-    ? `<p class="source-attribution">Recipe source: ${escapeHtml(label)}</p>`
-    : "";
-  const link = recipe.url
-    ? `<a class="original-link" href="${escapeHtml(recipe.url)}" target="_blank" rel="noreferrer noopener">View on ${escapeHtml(label || "original source")} <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 17 17 7M8 7h9v9" /></svg></a>`
-    : "";
-  return `<div class="source-block">${attribution}${link}</div>`;
+  if (!recipe.url) return "";
+  const iconPath = sourceIconPath(recipe.source);
+  const publisherMark = iconPath
+    ? `<img class="source-favicon" src="${escapeHtml(iconPath)}" alt="" aria-hidden="true" width="20" height="20" />`
+    : `<span class="source-favicon source-favicon-fallback">${iconMarkup("globe")}</span>`;
+  return `
+    <div class="source-block">
+      <a class="source-link" href="${escapeHtml(recipe.url)}" target="_blank" rel="noreferrer noopener">
+        <span>View on</span>
+        ${publisherMark}
+        <strong>${escapeHtml(label || "original source")}</strong>
+        ${iconMarkup("external", "source-external")}
+      </a>
+    </div>`;
 };
 
 const showDialog = (target) => {

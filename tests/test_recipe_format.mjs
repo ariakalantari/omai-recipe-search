@@ -4,6 +4,7 @@ import test from "node:test";
 import {
   formatIngredientText,
   formatInstructionText,
+  instructionSteps,
 } from "../src/recipe_search/static/recipe-format.mjs";
 
 test("formats measurement amounts and ingredient counts", () => {
@@ -48,4 +49,21 @@ test("escapes recipe text before adding trusted formatting wrappers", () => {
   assert.doesNotMatch(output, /<img/);
   assert.match(output, /&lt;img src=x onerror=&quot;alert\(1\)&quot;&gt;/);
   assert.match(output, /<span class="recipe-time">3 minutes<\/span>/);
+});
+
+test("normalizes source numbering before rendering an ordered method", () => {
+  assert.deepEqual(
+    instructionSteps("1. Preheat the oven.\nStep 2: Mix well.\n3) Serve."),
+    ["Preheat the oven.", "Mix well.", "Serve."],
+  );
+});
+
+test("removes a combined source paragraph when its full steps also follow", () => {
+  assert.deepEqual(
+    instructionSteps(
+      "Cookie method: 1. Preheat the oven until it reaches temperature. 2. Mix everything.\n"
+      + "1. Preheat the oven until it reaches temperature.\n2. Mix everything.",
+    ),
+    ["Preheat the oven until it reaches temperature.", "Mix everything."],
+  );
 });

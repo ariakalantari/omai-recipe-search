@@ -18,16 +18,53 @@ ShortText = Annotated[str, StringConstraints(strip_whitespace=True, min_length=1
 
 
 class SearchRequest(BaseModel):
-    model_config = ConfigDict(extra="forbid")
+    model_config = ConfigDict(
+        extra="forbid",
+        json_schema_extra={
+            "examples": [
+                {
+                    "query": "något starkt med torsk och kokosmjölk",
+                    "limit": 10,
+                    "mode": "hybrid",
+                    "ai": "auto",
+                },
+                {
+                    "ingredients": ["eggs", "potatoes", "onion"],
+                    "limit": 10,
+                    "mode": "hybrid",
+                    "ai": "off",
+                },
+            ]
+        },
+    )
 
     query: Annotated[
         str | None,
         StringConstraints(strip_whitespace=True, min_length=1, max_length=500),
-    ] = None
-    ingredients: list[ShortText] | None = Field(default=None, min_length=1, max_length=20)
-    limit: int = Field(default=10, ge=1, le=50)
-    mode: SearchMode = SearchMode.HYBRID
-    ai: Literal["auto", "off"] = "auto"
+    ] = Field(
+        default=None,
+        description="Natural-language cooking request in any language supported by the embedding model.",
+    )
+    ingredients: list[ShortText] | None = Field(
+        default=None,
+        min_length=1,
+        max_length=20,
+        description="Explicit ingredient list. Provide this or query, never both.",
+    )
+    limit: int = Field(
+        default=10,
+        ge=1,
+        le=50,
+        description="Maximum number of ranked recipes to return.",
+    )
+    mode: SearchMode = Field(
+        default=SearchMode.HYBRID,
+        description="Retrieval strategy. Hybrid is the recommended default.",
+    )
+    ai: Literal["auto", "off"] = Field(
+        default="auto",
+        description="Allow optional Azure query interpretation when configured, or force local-only search.",
+    )
 
     @field_validator("query")
     @classmethod
@@ -53,36 +90,52 @@ class SearchRequest(BaseModel):
 
 
 class ScoreResponse(BaseModel):
-    final: float
-    semantic: float | None
-    lexical: float
-    ingredient: float
-    distinctiveness: float
+    final: float = Field(description="Final ranking score after weighted signal combination.")
+    semantic: float | None = Field(
+        description="Multilingual embedding similarity, or null when semantic retrieval is unavailable."
+    )
+    lexical: float = Field(description="Character TF-IDF similarity score.")
+    ingredient: float = Field(description="Deterministic ingredient coverage score.")
+    distinctiveness: float = Field(
+        description="Corpus-relative novelty signal used by adventurous discovery."
+    )
 
 
 class MatchReasonResponse(BaseModel):
-    summary: str
-    matched_ingredients: list[str]
-    scores: ScoreResponse
+    summary: str = Field(description="Short explanation of why this recipe was returned.")
+    matched_ingredients: list[str] = Field(
+        description="Normalized requested ingredients found in the recipe."
+    )
+    scores: ScoreResponse = Field(description="Inspectible ranking components.")
 
 
 class RecipeResponse(BaseModel):
-    id: str
-    name: str
-    ingredients: list[str]
-    source: str | None
-    url: str | None
-    image_url: str | None
-    prep_time: str | None
-    cook_time: str | None
-    total_minutes: int | None
-    recipe_yield: str | None
-    description: str | None
-    summary: str
-    instructions: str | None
-    instruction_source: str | None
-    score: float
-    match_reason: MatchReasonResponse
+    id: str = Field(description="Stable identifier derived from the recipe record.")
+    name: str = Field(description="Recipe title.")
+    ingredients: list[str] = Field(description="Source-backed ingredient lines.")
+    source: str | None = Field(description="Publisher identifier when present in the dataset.")
+    url: str | None = Field(description="Original publisher URL when present and valid.")
+    image_url: str | None = Field(
+        description="Original image URL when present. The current interface does not load it."
+    )
+    prep_time: str | None = Field(description="Source preparation time in ISO 8601 duration form.")
+    cook_time: str | None = Field(description="Source cooking time in ISO 8601 duration form.")
+    total_minutes: int | None = Field(
+        description="Prep plus cook minutes, only when both source durations parse successfully."
+    )
+    recipe_yield: str | None = Field(description="Source yield or serving text.")
+    description: str | None = Field(description="Source description when available.")
+    summary: str = Field(
+        description="Source description or a deterministic ingredient-based fallback summary."
+    )
+    instructions: str | None = Field(description="Source-backed method steps when available.")
+    instruction_source: str | None = Field(
+        description="Provenance of instructions, such as dataset or matched_corpus."
+    )
+    score: float = Field(
+        description="Rounded final ranking score for inspection, not user display."
+    )
+    match_reason: MatchReasonResponse = Field(description="Explainable ranking details.")
 
     @classmethod
     def from_ranked(
@@ -177,9 +230,13 @@ class SearchMetaResponse(BaseModel):
 
 
 class SearchResponse(BaseModel):
-    query: str
-    results: list[RecipeResponse]
-    meta: SearchMetaResponse
+    query: str = Field(description="Normalized display form of the submitted request.")
+    results: list[RecipeResponse] = Field(
+        description="Recipes ordered from most to least relevant."
+    )
+    meta: SearchMetaResponse = Field(
+        description="Retrieval status, strategy, and query interpretation."
+    )
 
 
 class HealthResponse(BaseModel):

@@ -100,3 +100,17 @@ const formatText = (value, options) => {
 export const formatIngredientText = (value) => formatText(value, { includeLeadingQuantity: true });
 
 export const formatInstructionText = (value) => formatText(value, { includeLeadingQuantity: false });
+
+export const instructionSteps = (value) => {
+  const steps = String(value ?? "")
+    .split(/\n+/)
+    .map((step) => step.trim().replace(/^(?:step\s*)?\d+\s*[.):]\s*/i, "").trim())
+    .filter(Boolean);
+
+  return steps.filter((step, index) => {
+    if (steps.indexOf(step) !== index) return false;
+    return !steps.slice(index + 1).some(
+      (laterStep) => laterStep.length >= 24 && step.length > laterStep.length && step.includes(laterStep),
+    );
+  });
+};

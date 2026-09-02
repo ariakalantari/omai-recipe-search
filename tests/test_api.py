@@ -28,8 +28,10 @@ async def test_search_api_and_health(
         assert 'class="food-icons"' in landing.text
         assert "Multilingual hybrid search" not in landing.text
         assert 'id="recipe-dialog"' in landing.text
-        assert "styles.css?v=6" in landing.text
-        assert 'type="module" src="app.js?v=6"' in landing.text
+        assert "styles.css?v=7" in landing.text
+        assert 'type="module" src="app.js?v=7"' in landing.text
+        assert "Three retrieval signals, one final ranker" in landing.text
+        assert "Publisher marks are bundled with this site" in landing.text
 
         script = await client.get("/app.js")
         assert script.status_code == 200
@@ -48,14 +50,22 @@ async def test_search_api_and_health(
         assert 'apiUrl("/readyz")' in script.text
         assert "formatIngredientText" in script.text
         assert "formatInstructionText" in script.text
-        assert "recipeFacts" in script.text
+        assert "instructionSteps" in script.text
+        assert "recipeFactItems" in script.text
         assert "sourceLabel" in script.text
+        assert "sourceIconPath" in script.text
+        assert 'class="detail-metric"' in script.text
+        assert "hourglass" in script.text
+        assert "stopwatch" not in script.text
+        assert 'class="source-link"' in script.text
+        assert "Recipe source:" not in script.text
 
         metadata = await client.get("/recipe-metadata.mjs")
         assert metadata.status_code == 200
         assert "compactRecipeYield" in metadata.text
         assert "total_minutes" in metadata.text
         assert "Bon Appétit" in metadata.text
+        assert "source-icons/allrecipes.svg" in metadata.text
 
         formatter = await client.get("/recipe-format.mjs")
         assert formatter.status_code == 200
@@ -72,12 +82,41 @@ async def test_search_api_and_health(
         assert "@keyframes shimmer" not in stylesheet.text
         assert ".recipe-amount" in stylesheet.text
         assert ".recipe-time, .recipe-temperature" in stylesheet.text
+        assert ".recipe-fact" in stylesheet.text
+        assert ".detail-metric" in stylesheet.text
+        assert ".source-favicon" in stylesheet.text
+        assert ".detail-metric { display: inline-flex" in stylesheet.text
+        assert "scrollbar-color" in stylesheet.text
+        assert "::-webkit-scrollbar-thumb" in stylesheet.text
 
         favicon = await client.get("/favicon.svg")
         assert favicon.status_code == 200
         assert "#d4663d" in favicon.text
         assert "#d88a2d" in favicon.text
         assert "#64915f" in favicon.text
+
+        for publisher in ("allrecipes", "bonappetit", "epicurious"):
+            publisher_icon = await client.get(f"/source-icons/{publisher}.svg")
+            assert publisher_icon.status_code == 200
+            assert "data:image/png;base64" in publisher_icon.text
+
+        openapi = await client.get("/openapi.json")
+        assert openapi.status_code == 200
+        specification = openapi.json()
+        search_operation = specification["paths"]["/api/search"]["post"]
+        assert search_operation["summary"] == "Search the recipe collection"
+        assert search_operation["responses"]["413"]["description"].startswith(
+            "Request body exceeds"
+        )
+        assert specification["components"]["schemas"]["SearchRequest"]["examples"]
+        total_schema = specification["components"]["schemas"]["RecipeResponse"]["properties"][
+            "total_minutes"
+        ]
+        assert "only when both source durations" in total_schema["description"]
+        assert {tag["name"] for tag in specification["tags"]} == {
+            "search",
+            "operations",
+        }
 
         response = await client.post(
             "/api/search",

@@ -32,3 +32,17 @@ attributable to the source publishers. This demonstration must not be represente
 commercial recipe catalog without confirming those content rights.
 
 Recipe Box project attribution: Ryan Lee, <https://github.com/rtlee9/recipe-box>.
+
+## Publisher favicon marks
+
+The interface bundles small publisher favicon images solely to identify the destination of each
+source link. Serving them locally avoids a third-party network request when a user opens a recipe
+detail. Publisher names and marks remain the property of their respective owners.
+
+- Allrecipes favicon: <https://www.allrecipes.com/favicon.ico>
+  - converted to PNG for browser display
+  - bundled PNG SHA-256: `74a1e11696a3205b33240253a77e27be45d612b7e00d0b2e5589c73303bb5447`
+- Epicurious favicon: <https://www.epicurious.com/verso/static/epicurious-us/assets/favicon.ico>
+  - bundled PNG SHA-256: `7194ccb52c4e0acd665335eb0ca40f4a7562554d973cf100db6eb0731004cf8e`
+- Bon Appétit favicon: <https://www.bonappetit.com/verso/static/bonappetit-us/assets/favicon.ico>
+  - bundled PNG SHA-256: `1117ffdbecfd0f0ef666b8a64ccfc616a92be07fb28a7c50907530751c2f5f41`
