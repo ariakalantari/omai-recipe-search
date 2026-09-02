@@ -27,6 +27,8 @@ async def test_search_api_and_health(
         assert 'class="food-icons"' in landing.text
         assert "Multilingual hybrid search" not in landing.text
         assert 'id="recipe-dialog"' in landing.text
+        assert "styles.css?v=3" in landing.text
+        assert "app.js?v=3" in landing.text
 
         script = await client.get("/app.js")
         assert script.status_code == 200
@@ -78,6 +80,8 @@ async def test_search_api_and_health(
         assert body["meta"]["strategy"] == "search"
         assert response.headers["cache-control"] == "no-store"
         assert landing.headers["x-frame-options"] == "DENY"
+        assert landing.headers["cache-control"] == "no-cache"
+        assert script.headers["cache-control"] == "no-cache"
         assert "default-src 'self'" in landing.headers["content-security-policy"]
 
 

@@ -148,6 +148,7 @@ def create_app(
         response.headers["Permissions-Policy"] = "camera=(), microphone=(), geolocation=()"
         path = request.url.path
         if path == "/" or path.endswith((".js", ".css", ".svg")):
+            response.headers["Cache-Control"] = "no-cache"
             response.headers["Content-Security-Policy"] = (
                 "default-src 'self'; base-uri 'none'; object-src 'none'; "
                 "frame-ancestors 'none'; form-action 'self'; img-src 'self' data:; "
